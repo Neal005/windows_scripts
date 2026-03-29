@@ -59,28 +59,96 @@ try {
 }
 
 # ==========================================
-# 6. KIEM TRA XAC THUC USER/PASS (Gui vao test-conection)
+# 6. KIEM TRA TOAN DIEN QUYEN PUB VA SUB (DASHBOARD)
 # ==========================================
-Write-Host "`n[2/2] Dang kiem tra xac thuc User/Pass..." -ForegroundColor Yellow
-$testCmd = "mosquitto_pub $connCmd -t 'test-conection' -m 'ping_auth_check'"
+Write-Host "`n[2/2] Dang kiem tra phan quyen (ACL) tren topic '$topic'..." -ForegroundColor Yellow
 
-$testResult = ""
+$hasPub = $false
+$hasSub = $false
+
+# 6.1 Check quyen Publish (Pub xong la tu thoat nen khong so bi ket)
+$testPubCmd = "mosquitto_pub $connCmd -t `"$topic`" -m `"ping_auth_check`""
+$pubResult = ""
 try {
-    $testResult = Invoke-Expression "$testCmd 2>&1" | Out-String
+    $pubResult = Invoke-Expression "$testPubCmd 2>&1" | Out-String
+    if ($LASTEXITCODE -eq 0 -and $pubResult -notmatch "not authorised|Connection Refused|Error|Denied") {
+        $hasPub = $true
+    }
+} catch {}
+
+# 6.2 Check quyen Subscribe (Chay ngam, doi 1.5s roi giet tien trinh de tranh bi treo)
+$errFile = "$env:TEMP\sub_err_temp.txt"
+if (Test-Path $errFile) { Remove-Item $errFile -Force -ErrorAction SilentlyContinue }
+
+try {
+    # Chay mosquitto_sub an vao nen
+    $subProcess = Start-Process -FilePath "mosquitto_sub" -ArgumentList "$connCmd -t `"$topic`"" -WindowStyle Hidden -PassThru -RedirectStandardError $errFile
+    
+    # Cho tien trinh tra loi toi da 1.5 giay
+    $subProcess.WaitForExit(1500) | Out-Null
+    
+    if (-not $subProcess.HasExited) {
+        # Tien trinh van con song (tuc la Sub thanh cong va dang doi tin) -> CO QUYEN!
+        $hasSub = $true
+        $subProcess.Kill() # Giet luon de thoat nhanh, khong bi ket script
+    } else {
+        # Tien trinh bi vang ra ngay lap tuc -> Doc file loi xem phai do ACL khong
+        if (Test-Path $errFile) {
+            $errText = Get-Content $errFile -Raw -ErrorAction SilentlyContinue
+            if ($errText -match "not authorised|Connection Refused|Error|Denied") {
+                $hasSub = $false
+            } else {
+                $hasSub = $true
+            }
+        } else {
+            $hasSub = $true
+        }
+    }
 } catch {
-    $testResult = $_.Exception.Message
+    # Bo qua neu loi he thong
+} finally {
+    # Don dep file rac
+    if (Test-Path $errFile) { Remove-Item $errFile -Force -ErrorAction SilentlyContinue }
 }
 
-if ($LASTEXITCODE -ne 0 -or $testResult -match "Connection Refused|not authorised|Error") {
-    Write-Host "-> [LOI] Xac thuc that bai! Sai Username, Password hoac bi Broker tu choi." -ForegroundColor Red
-    if (-not [string]::IsNullOrWhiteSpace($testResult)) {
-        Write-Host "Chi tiet tu server: $testResult" -ForegroundColor DarkGray
-    }
-    Read-Host "Nhan Enter de thoat..."
-    exit
+# 6.3 Hien thi Bang tong hop quyen han
+Write-Host "`n+--------------------------------------------------+" -ForegroundColor Cyan
+Write-Host "| KET QUA PHAN QUYEN TAI KHOAN TREN BROKER         |" -ForegroundColor Cyan
+Write-Host "+--------------------------------------------------+" -ForegroundColor Cyan
+
+if ($hasPub) {
+    Write-Host "| Quyen Publish   :  [ V ] Cho phep                |" -ForegroundColor Green
 } else {
-    Write-Host "-> Xac thuc thanh cong! Da vao duoc Broker." -ForegroundColor Green
+    Write-Host "| Quyen Publish   :  [ X ] Tu choi (No permission) |" -ForegroundColor DarkGray
 }
+
+if ($hasSub) {
+    Write-Host "| Quyen Subscribe :  [ V ] Cho phep                |" -ForegroundColor Green
+} else {
+    Write-Host "| Quyen Subscribe :  [ X ] Tu choi (No permission) |" -ForegroundColor DarkGray
+}
+Write-Host "+--------------------------------------------------+`n" -ForegroundColor Cyan
+
+# 6.4 Xu ly logic chan / tha dua tren lua chon cong viec cua sep
+if ($action -match "^p") {
+    if (-not $hasPub) {
+        Write-Host "-> [LOI] Sep dang chon che do Publish nhung tai khoan lai KHONG CO QUYEN ghi vao topic nay!" -ForegroundColor Red
+        Read-Host "Nhan Enter de thoat..."
+        exit
+    } else {
+        Write-Host "-> [OK] Quyen Publish hop le! Dang chuyen vao terminal lam viec..." -ForegroundColor Green
+    }
+} else {
+    if (-not $hasSub) {
+        Write-Host "-> [LOI] Sep dang chon che do Subscribe nhung tai khoan lai KHONG CO QUYEN doc tu topic nay!" -ForegroundColor Red
+        Read-Host "Nhan Enter de thoat..."
+        exit
+    } else {
+        Write-Host "-> [OK] Quyen Subscribe hop le! Dang chuyen vao terminal lam viec..." -ForegroundColor Green
+    }
+}
+
+Start-Sleep -Seconds 1
 
 # ==========================================
 # XU LY CHINH: TACH RIENG PUB VA SUB
@@ -90,17 +158,11 @@ if ($action -match "^p") {
     # --- CHE DO PUBLISH LIEN TUC ---
     Write-Host "`n=== CHE DO GUI TIN LIEN TUC ===" -ForegroundColor Yellow
     Write-Host "Dang lam viec tren Topic: $topic" -ForegroundColor Green
-    Write-Host "Go 'exit' vao o Message de thoat chuong trinh." -ForegroundColor DarkGray
+    Write-Host "Nhan Ctrl + C de thoat chuong trinh." -ForegroundColor DarkGray
     Write-Host "--------------------------------------------------`n" -ForegroundColor Cyan
     
     while ($true) {
         $message = Read-Host "Nhap Message"
-        
-        # Kiem tra thoat
-        if ($message -eq "exit") {
-            Write-Host "`nDang thoat che do Publish..." -ForegroundColor Yellow
-            break
-        }
         
         # Bo qua neu message rong
         if ([string]::IsNullOrWhiteSpace($message)) {
@@ -110,18 +172,22 @@ if ($action -match "^p") {
         
         # Them dau \ truoc ngoac kep cua JSON de khong bi loi cu phap
         $safeMessage = $message -replace '"', '\"'
-        
-        # Rap lenh hoan chinh de Pub
         $fullCommand = "mosquitto_pub $baseCmd -m '$safeMessage'"
         
-        # Chay lenh
+        # Chay lenh va bat output de kiem tra loi ACL/Auth
+        $pubResult = ""
         try {
-            Invoke-Expression $fullCommand
-            Write-Host "-> Da gui thanh cong!" -ForegroundColor Green
+            $pubResult = Invoke-Expression "$fullCommand 2>&1" | Out-String
+            if ($LASTEXITCODE -ne 0 -or $pubResult -match "not authorised|Connection Refused|Error") {
+                Write-Host "-> [LOI] Khong the Publish. Sai Pass hoac khong co quyen (ACL) tren topic nay!" -ForegroundColor Red
+                if (-not [string]::IsNullOrWhiteSpace($pubResult)) { Write-Host "Chi tiet: $pubResult" -ForegroundColor DarkGray }
+            } else {
+                Write-Host "-> Da gui thanh cong!" -ForegroundColor Green
+            }
         } catch {
             Write-Host "-> [LOI] Da co loi xay ra: $_" -ForegroundColor Red
         }
-        Write-Host "" # Xuong dong cho dep
+        Write-Host ""
     }
 
 } else {
