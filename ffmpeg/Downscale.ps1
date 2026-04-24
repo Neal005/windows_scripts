@@ -21,7 +21,7 @@ if (-not (Test-Path $inputFile)) {
 
 Write-Host "Dang quet thong so video goc..." -ForegroundColor DarkCyan
 
-# Lay thong so do phan giai (chieu cao) va FPS tu file goc
+# Lay thong so do phan giai (chieu cao) va FPS tu file goc (Boc ngoac kep de chong loi khoang trang)
 $origHeight = [int](ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "`"$inputFile`"")
 $origFpsStr = ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 "`"$inputFile`""
 
@@ -90,20 +90,26 @@ Write-Host "------------------------------------------------"
 
 # 4. Xu ly ten va vi tri file dau ra (xuat luon cung thu muc)
 $fileInfo = Get-Item $inputFile
-$outputFile = Join-Path -Path $fileInfo.DirectoryName -ChildPath ($fileInfo.BaseName + "_lite" + $fileInfo.Extension)
+# FIX 1: Ep video dau ra ve chuan MP4 cho nhe va tuong thich tot nhat
+$outputFile = Join-Path -Path $fileInfo.DirectoryName -ChildPath ($fileInfo.BaseName + "_lite.mp4")
 
 Write-Host "Dang tien hanh ep xung video! Vui long doi..." -ForegroundColor Yellow
 
 $encoder = if ($env:FFMPEG_GPU_ENCODER) { $env:FFMPEG_GPU_ENCODER } else { "libx264" }
-Write-Host "Lenh thuc thi: ffmpeg -i video_goc -vf scale=-2:$targetHeight -r $targetFps -c:v $encoder output_video" -ForegroundColor DarkGray
 
-# Thuc thi FFmpeg
-ffmpeg -i $inputFile -vf scale=-2:$targetHeight -r $targetFps -c:v $encoder $outputFile
+# FIX 2: Gop chung viec scale (thay doi kich thuoc) voi viec chuyen he mau (format=yuv420p) de ho tro GPU
+$vfParams = "scale=-2:$targetHeight,format=yuv420p"
+
+Write-Host "Lenh thuc thi: ffmpeg -i video_goc -vf `"$vfParams`" -r $targetFps -c:v $encoder output_video" -ForegroundColor DarkGray
+
+# FIX 3: Dung Invoke-Expression va boc ngoac kep duong dan de khong bi loi neu thu muc co dau cach
+$ffmpegCmd = "ffmpeg -i `"$inputFile`" -vf `"$vfParams`" -r $targetFps -c:v $encoder -c:a aac -movflags +faststart `"$outputFile`""
+Invoke-Expression $ffmpegCmd
 
 if (Test-Path $outputFile) {
     Write-Host ""
-    Write-Host "HOAN TAT! Video da duoc ép mo thanh cong." -ForegroundColor Green
-    Write-Host "File nam chình ình o day: $outputFile" -ForegroundColor Cyan
+    Write-Host "HOAN TAT! Video da duoc ep mo thanh cong." -ForegroundColor Green
+    Write-Host "File nam chinh inh o day: $outputFile" -ForegroundColor Cyan
 } else {
     Write-Host ""
     Write-Host "Loi roi! Khong thay file dau ra. Sep kiem tra lai qua trinh render nhe." -ForegroundColor Red
