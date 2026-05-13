@@ -6,12 +6,20 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     exit
 }
 
-Write-Host "Dang quet trang thai he thong..." -ForegroundColor Cyan
-
-# Lay thong tin phien ban Windows
+# Lay thong tin he thong chi tiet
 $osInfo = Get-WmiObject -Class Win32_OperatingSystem
-$osName = $osInfo.Caption
-$osBuild = $osInfo.BuildNumber
+$osName = $osInfo.Caption.Trim()
+$osVersion = $osInfo.Version
+$osArchitecture = $osInfo.OSArchitecture
+
+Clear-Host
+Write-Host "================================================" -ForegroundColor Cyan
+Write-Host "THONG TIN HE THONG:" -ForegroundColor Cyan
+Write-Host "  - Phien ban: $osName" -ForegroundColor White
+Write-Host "  - Build:     $osVersion ($osArchitecture)" -ForegroundColor White
+Write-Host "================================================" -ForegroundColor Cyan
+
+Write-Host "`nDang quet trang thai ban quyen he thong..." -ForegroundColor White
 
 # Goi ngam slmgr.vbs
 $slmgrPath = "$env:SystemRoot\System32\slmgr.vbs"
@@ -28,27 +36,31 @@ if ($dliOutput -match "RETAIL") {
 } elseif ($dliOutput -match "OEM") {
     $isGenuineChannel = $true
     $licenseType = "OEM (Theo may)"
+} elseif ($dliOutput -match "VOLUME_MAK") {
+    $isGenuineChannel = $true
+    $licenseType = "Volume MAK (Key Doanh nghiep)"
 }
 
 $isKmsChannel = ($dliOutput -match "VOLUME_KMSCLIENT")
 $isPermanent = ($xprOutput -match "permanently activated" -or $xprOutput -match "vinh vien")
 
-Write-Host "------------------------------------------------"
-Write-Host "PHIEN BAN: $osName (Build $osBuild)" -ForegroundColor White
-Write-Host "------------------------------------------------"
+Write-Host "------------------------------------------------" -ForegroundColor Cyan
 
 if ($isGenuineChannel -and $isPermanent) {
     Write-Host "[+] KET QUA: WINDOWS BAN QUYEN CHINH HANG (XIN)" -ForegroundColor Green
     Write-Host "    - Loai giay phep: $licenseType" -ForegroundColor Green
     Write-Host "    - Trang thai: Kich hoat vinh vien" -ForegroundColor Green
-} elseif ($isKmsChannel -or (-not $isPermanent -and ($xprOutput -match "expire" -or $xprOutput -match "het han"))) {
-    Write-Host "[-] KET QUA: WINDOWS CRACK (LAU)" -ForegroundColor Red
-    Write-Host "    - Loai giay phep: Volume KMS Client" -ForegroundColor Red
-    Write-Host "    - Trang thai: Kich hoat co thoi han" -ForegroundColor Red
+} elseif ($isKmsChannel) {
+    Write-Host "[!] KET QUA: GIAY PHEP DOANH NGHIEP (KMS)" -ForegroundColor Yellow
+    Write-Host "    - Loai giay phep: Volume KMS Client" -ForegroundColor Yellow
+    Write-Host "    - Luu y: Kich hoat qua may chu (Server). Neu la may ca nhan o nha thi 99% la dung hang Crack (KMSpico...). Neu la may cong ty, day co the la ban quyen xin cua to chuc!" -ForegroundColor Yellow
+} elseif (-not $isPermanent -and ($xprOutput -match "expire" -or $xprOutput -match "het han")) {
+    Write-Host "[-] KET QUA: WINDOWS CRACK (LAU) / GIAY PHEP HET HAN" -ForegroundColor Red
+    Write-Host "    - Loai giay phep: Khong xac dinh hoac da het thoi han" -ForegroundColor Red
 } else {
-    Write-Host "[!] KET QUA: KHONG RO RANG" -ForegroundColor Yellow
-    Write-Host "    - Vui long kiem tra thu cong tai: Settings > System > Activation" -ForegroundColor Yellow
+    Write-Host "[!] KET QUA: KHONG RO RANG" -ForegroundColor DarkYellow
+    Write-Host "    - Vui long kiem tra thu cong tai: Settings > System > Activation" -ForegroundColor DarkYellow
 }
-Write-Host "------------------------------------------------"
-Write-Host "Nhan phim bat ky de thoat..."
+Write-Host "------------------------------------------------" -ForegroundColor Cyan
+Write-Host "Nhan phim bat ky de thoat..." -ForegroundColor White
 $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
