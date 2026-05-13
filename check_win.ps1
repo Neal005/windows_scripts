@@ -6,7 +6,12 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     exit
 }
 
-Write-Host "Dang quet trang thai ban quyen he thong..." -ForegroundColor Cyan
+Write-Host "Dang quet trang thai he thong..." -ForegroundColor Cyan
+
+# Lay thong tin phien ban Windows
+$osInfo = Get-WmiObject -Class Win32_OperatingSystem
+$osName = $osInfo.Caption
+$osBuild = $osInfo.BuildNumber
 
 # Goi ngam slmgr.vbs
 $slmgrPath = "$env:SystemRoot\System32\slmgr.vbs"
@@ -29,6 +34,9 @@ $isKmsChannel = ($dliOutput -match "VOLUME_KMSCLIENT")
 $isPermanent = ($xprOutput -match "permanently activated" -or $xprOutput -match "vinh vien")
 
 Write-Host "------------------------------------------------"
+Write-Host "PHIEN BAN: $osName (Build $osBuild)" -ForegroundColor White
+Write-Host "------------------------------------------------"
+
 if ($isGenuineChannel -and $isPermanent) {
     Write-Host "[+] KET QUA: WINDOWS BAN QUYEN CHINH HANG (XIN)" -ForegroundColor Green
     Write-Host "    - Loai giay phep: $licenseType" -ForegroundColor Green
