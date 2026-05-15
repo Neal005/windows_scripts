@@ -53,14 +53,18 @@ if ($isGenuineChannel -and $isPermanent) {
 } elseif ($isKmsChannel) {
     Write-Host "[!] KET QUA: GIAY PHEP DOANH NGHIEP (KMS)" -ForegroundColor Yellow
     Write-Host "    - Loai giay phep: Volume KMS Client" -ForegroundColor Yellow
-    Write-Host "    - Luu y: Kich hoat qua may chu (Server). Neu la may ca nhan o nha thi 99% la dung hang Crack (KMSpico...). Neu la may cong ty, day co the la ban quyen xin cua to chuc!" -ForegroundColor Yellow
+    Write-Host "    - Luu y: Kich hoat qua may chu (Server)." -ForegroundColor Yellow
+    Write-Host "      + Neu la may ca nhan o nha: 99% la dung hang Crack (KMSpico...)." -ForegroundColor Yellow
+    Write-Host "      + Neu la may cong ty: Day co the la ban quyen xin cua to chuc!" -ForegroundColor Yellow
 } elseif (-not $isPermanent -and ($xprOutput -match "expire" -or $xprOutput -match "het han")) {
     Write-Host "[-] KET QUA: WINDOWS CRACK (LAU) / GIAY PHEP HET HAN" -ForegroundColor Red
     Write-Host "    - Loai giay phep: Khong xac dinh hoac da het thoi han" -ForegroundColor Red
 } else {
     Write-Host "[!] KET QUA: KHONG RO RANG" -ForegroundColor DarkYellow
-    Write-Host "    - Vui long kiem tra thu cong tai: Settings > System > Activation" -ForegroundColor DarkYellow
+    Write-Host "    - Vui long kiem tra thu cong tai:" -ForegroundColor DarkYellow
+    Write-Host "      Settings > System > Activation" -ForegroundColor DarkYellow
 }
+
 Write-Host "------------------------------------------------" -ForegroundColor Cyan
-Write-Host "Nhan phim bat ky de thoat..." -ForegroundColor White
+Write-Host "`nNhan phim bat ky de thoat..." -ForegroundColor White
 $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
