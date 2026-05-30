@@ -37,9 +37,9 @@ if ([string]::IsNullOrWhiteSpace($dateInput)) {
 
 $endDate = $startDate.AddDays(1)
 
-# Dat ten file va duong dan xuat ra Desktop
+# Dat ten file va duong dan xuat ra Desktop (Da doi sang dinh dang .csv)
 $dateString = $startDate.ToString("dd-MM-yyyy")
-$fileName = "Log_$($logName)_$dateString.txt"
+$fileName = "Log_$($logName)_$dateString.csv"
 $exportPath = Join-Path -Path $desktopPath -ChildPath $fileName
 
 Write-Host ""
@@ -49,12 +49,12 @@ try {
     # Quet toan bo log trong khoang thoi gian da chon
     $events = Get-WinEvent -FilterHashtable @{LogName=$logName; StartTime=$startDate; EndTime=$endDate} -ErrorAction Stop
     
-    # Format va xuat ra file txt. Dung Format-List de de doc cac message dai.
-    $events | Select-Object TimeCreated, LevelDisplayName, Id, Message | Format-List | Out-File -FilePath $exportPath -Encoding UTF8
+    # Format va xuat truc tiep ra file CSV thay vi txt
+    $events | Select-Object TimeCreated, LevelDisplayName, Id, Message | Export-Csv -Path $exportPath -NoTypeInformation -Encoding UTF8
     
-    Write-Host "Thanh cong! File log da duoc vut ra Desktop tai: $exportPath" -ForegroundColor Green
+    Write-Host "Thanh cong! File log CSV da duoc vut ra Desktop tai: $exportPath" -ForegroundColor Green
     
-    # Tu dong mo file log cho sep xem luon
+    # Tu dong mo file CSV cho sep xem luon (Neu may da cai Excel thi se mo bang Excel)
     Invoke-Item $exportPath
 } catch {
     Write-Host "Khong co du lieu log nao trong ngay nay hoac file log dang bi khoa." -ForegroundColor Yellow
