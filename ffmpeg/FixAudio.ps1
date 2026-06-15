@@ -17,7 +17,15 @@ Write-Host "------------------------------------------------"
 Write-Host "Buoc 2: Nhap ty le am thanh can thay doi." -ForegroundColor Yellow
 Write-Host "- Co the nhap so thap phan (VD: 0.916)" -ForegroundColor DarkGray
 Write-Host "- Hoac nhap luon phan so cho le (VD: 55/60 hoac 60/55)" -ForegroundColor DarkGray
+Write-Host "- Bo trong va nhan Enter de dung mac dinh: 5.500/5.570" -ForegroundColor Green
+
 $ratioInput = Read-Host "Moi sep nhap ty le"
+
+# Kiem tra neu bo trong (chi nhan Enter) thi gan gia tri mac dinh
+if ([string]::IsNullOrWhiteSpace($ratioInput)) {
+    $ratioInput = "5.500/5.570"
+    Write-Host "=> Da ap dung ty le mac dinh: $ratioInput" -ForegroundColor DarkCyan
+}
 
 $tempo = 1.0
 
