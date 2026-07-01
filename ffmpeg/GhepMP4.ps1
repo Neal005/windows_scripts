@@ -12,7 +12,7 @@ if ([string]::IsNullOrWhiteSpace($inputString)) {
     exit
 }
 
-# Parse chuoi keo tha (ho tro ca duong dan co ngoac kep va khong co ngoac kep)
+# Parse chuoi keo tha 
 $regex = '(?:"([^"]+)")|(?:([^\s"]+))'
 $matches = [regex]::Matches($inputString, $regex)
 
@@ -39,7 +39,7 @@ if ($videoFiles.Count -eq 0) {
 Write-Host "=> Da tim thay $($videoFiles.Count) file video. Dang tao don hang..." -ForegroundColor Magenta
 Write-Host "------------------------------------------------"
 
-# Lay thu muc cua file dau tien de lam noi luu tru file tam va file xuat ra
+# Lay thu muc cua file dau tien
 $workDir = $videoFiles[0].DirectoryName
 Set-Location -Path $workDir
 
@@ -49,34 +49,53 @@ $listContent = $videoFiles | ForEach-Object {
     $safePath = $_.FullName -replace "'", "'\''"
     "file '$safePath'" 
 }
-# FIX 1: Dung encoding ASCII de FFmpeg khong bi boi roi boi loi BOM cua UTF-8
-Set-Content -Path $listFile -Value $listContent -Encoding ASCII
 
-# File xuat ra se nam ngay trong thu muc do
+# Chuyen sang UTF-8 No BOM de FFmpeg nhan dien chuan xac tieng Viet
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllLines($listFile, $listContent, $utf8NoBom)
+
 $outputMp4 = Join-Path -Path $workDir -ChildPath "Video_Final_ThanhBach.mp4"
 
-# 3. Chay FFmpeg voi kha nang tu thich nghi dinh dang (Auto-detect)
-$encoder = if ($env:FFMPEG_GPU_ENCODER) { $env:FFMPEG_GPU_ENCODER } else { "libx264" }
-
-# Kiem tra dinh dang pixel cua file dau tien
-Write-Host "Dang kiem tra thong so ky thuat cua nguyen lieu..." -ForegroundColor Gray
+# 3. Kiem tra dinh dang pixel 
 $pixFmt = ffprobe -v error -select_streams v:0 -show_entries stream=pix_fmt -of default=noprint_wrappers=1:nokey=1 $videoFiles[0].FullName
 
 $vfParams = ""
-# FIX 2: Tu dong them filter yuv420p neu phat hien video goc la 4:2:2 (Dung cho the loai mjpeg, camera cu...)
 if ($pixFmt -like "*422*") {
-    Write-Host "(!) Phat hien dinh dang 4:2:2, dang kich hoat che do tuong thich cho GPU..." -ForegroundColor Magenta
     $vfParams = "-vf `"format=yuv420p`""
 }
 
-Write-Host "Dang noi cac file lai voi nhau va ep sang chuan MP4..." -ForegroundColor DarkCyan
-Write-Host "FFmpeg dang chay, sep pha ly cafe roi quay lai nhe!" -ForegroundColor Yellow
+# 4. Menu Lua chon Ep can (IQ 200)
+Write-Host "Buoc 2: Chot don chat luong hinh anh" -ForegroundColor Yellow
+Write-Host "[1] Ep can thanh bach (Dung luong sieu nho, chat luong du xem - Mac dinh)" -ForegroundColor White
+Write-Host "[2] Giu net bo doi (Dung luong lon hon, net cang nhu goc)" -ForegroundColor White
+$qualityChoice = Read-Host "Moi sep chon (1 hoac 2. Bam Enter de chon 1)"
 
-# Ghep lenh va thuc thi (Them faststart de toi uu video tren web)
-$ffmpegCmd = "ffmpeg -f concat -safe 0 -i $listFile $vfParams -c:v $encoder -c:a aac -movflags +faststart `"$outputMp4`""
+$encoder = if ($env:FFMPEG_GPU_ENCODER) { $env:FFMPEG_GPU_ENCODER } else { "libx264" }
+$qualityParams = ""
+
+if ($qualityChoice -eq '2') {
+    Write-Host "=> Da chot: Giu net bo doi! Dang nap dan xuyen giap cho dong co $encoder..." -ForegroundColor Magenta
+    if ($encoder -match "nvenc") {
+        $qualityParams = "-rc vbr -cq 22 -preset p6"
+    } elseif ($encoder -match "amf") {
+        $qualityParams = "-rc cqp -qp_p 22 -qp_i 22"
+    } elseif ($encoder -match "qsv") {
+        $qualityParams = "-global_quality 22"
+    } else {
+        $qualityParams = "-crf 22"
+    }
+} else {
+    Write-Host "=> Da chot: Ep can giam mo! De FFmpeg tu dong bop bitrate..." -ForegroundColor Magenta
+}
+
+Write-Host "------------------------------------------------"
+Write-Host "Dang noi cac file lai voi nhau va ep sang chuan MP4..." -ForegroundColor DarkCyan
+
+# 5. Ghep lenh va thuc thi 
+$ffmpegCmd = "ffmpeg -f concat -safe 0 -i $listFile $vfParams -c:v $encoder $qualityParams -c:a aac -movflags +faststart `"$outputMp4`""
 Invoke-Expression $ffmpegCmd
 
-# 4. Don dep hau truong cho thanh bach
+# 6. Don dep hau truong
 if (Test-Path $listFile) { 
     Remove-Item $listFile 
 }

@@ -21,11 +21,9 @@ if (-not (Test-Path $inputFile)) {
 
 Write-Host "Dang quet thong so video goc..." -ForegroundColor DarkCyan
 
-# Lay thong so do phan giai (chieu cao) va FPS tu file goc (Boc ngoac kep de chong loi khoang trang)
 $origHeight = [int](ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "`"$inputFile`"")
 $origFpsStr = ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 "`"$inputFile`""
 
-# Xu ly toan hoc cho FPS (FFmpeg thuong tra ve dang phan so)
 $fpsParts = $origFpsStr.Split('/')
 $origFps = [math]::Round([double]$fpsParts[0] / [double]$fpsParts[1], 2)
 
@@ -36,16 +34,14 @@ Write-Host "------------------------------------------------"
 $targetHeight = $origHeight
 while ($true) {
     $inputHeight = Read-Host "Buoc 2: Nhap chieu cao video muon giam (VD: 720). Nhan Enter de giu nguyen [$origHeight]"
-    
     if ([string]::IsNullOrWhiteSpace($inputHeight)) {
         Write-Host "-> Chot don: Giu nguyen ${origHeight}p" -ForegroundColor Magenta
         break
     }
-    
     if ([int]::TryParse($inputHeight, [ref]$null)) {
         $h = [int]$inputHeight
         if ($h -gt $origHeight) {
-            Write-Host "Canh bao: Sep dang buff chieu cao ($h) vuot muc goc ($origHeight)! Nhap lai nhe." -ForegroundColor Red
+            Write-Host "Canh bao: Sep dang buff chieu cao vuot muc goc! Nhap lai nhe." -ForegroundColor Red
         } elseif ($h -le 0) {
             Write-Host "Loi: So am hoac bang 0 lam sao chay duoc ha sep!" -ForegroundColor Red
         } else {
@@ -57,25 +53,22 @@ while ($true) {
         Write-Host "Vui long nhap so nguyen!" -ForegroundColor Red
     }
 }
-
 Write-Host "------------------------------------------------"
 
 # 3. Nhap FPS moi
 $targetFps = $origFps
 while ($true) {
     $inputFps = Read-Host "Buoc 3: Nhap FPS muon giam (VD: 30). Nhan Enter de giu nguyen [$origFps]"
-    
     if ([string]::IsNullOrWhiteSpace($inputFps)) {
         Write-Host "-> Chot don: Giu nguyen $origFps FPS" -ForegroundColor Magenta
         break
     }
-    
     if ([double]::TryParse($inputFps, [ref]$null)) {
         $f = [double]$inputFps
         if ($f -gt $origFps) {
-            Write-Host "Canh bao: FPS moi ($f) vuot tran FPS goc ($origFps)! Phai nhap nho hon hoac bang thoi." -ForegroundColor Red
+            Write-Host "Canh bao: FPS moi vuot tran FPS goc! Nhap nho hon hoac bang." -ForegroundColor Red
         } elseif ($f -le 0) {
-            Write-Host "Khung hinh ma be hon 0 la video di lui do sep! Nhap lai nhe." -ForegroundColor Red
+            Write-Host "Khung hinh be hon 0 la di lui do sep! Nhap lai nhe." -ForegroundColor Red
         } else {
             $targetFps = $f
             Write-Host "-> Chot don: Ep xuong $targetFps FPS" -ForegroundColor Magenta
@@ -85,25 +78,49 @@ while ($true) {
         Write-Host "Vui long nhap so thoi sep oi!" -ForegroundColor Red
     }
 }
+Write-Host "------------------------------------------------"
+
+# 4. Menu Lua chon Ep can (IQ 200)
+Write-Host "Buoc 4: Chot don chat luong hinh anh (bitrate)" -ForegroundColor Yellow
+Write-Host "[1] Ep can thanh bach (Dung luong nho nhat cho do phan giai nay - Mac dinh)" -ForegroundColor White
+Write-Host "[2] Giu net bo doi (Net cang tung pixel ở muc ${targetHeight}p)" -ForegroundColor White
+$qualityChoice = Read-Host "Moi sep chon (1 hoac 2. Bam Enter de chon 1)"
+
+$encoder = if ($env:FFMPEG_GPU_ENCODER) { $env:FFMPEG_GPU_ENCODER } else { "libx264" }
+$qualityParams = ""
+
+if ($qualityChoice -eq '2') {
+    Write-Host "=> Da chot: Giu net bo doi! Dang nap dan xuyen giap cho dong co $encoder..." -ForegroundColor Magenta
+    if ($encoder -match "nvenc") {
+        $qualityParams = "-rc vbr -cq 22 -preset p6"
+    } elseif ($encoder -match "amf") {
+        $qualityParams = "-rc cqp -qp_p 22 -qp_i 22"
+    } elseif ($encoder -match "qsv") {
+        $qualityParams = "-global_quality 22"
+    } else {
+        $qualityParams = "-crf 22"
+    }
+} else {
+    Write-Host "=> Da chot: Ep can giam mo! De FFmpeg tu dong bop bitrate..." -ForegroundColor Magenta
+}
 
 Write-Host "------------------------------------------------"
 
-# 4. Xu ly ten va vi tri file dau ra (xuat luon cung thu muc)
+# FIX IQ 200: Dam bao chieu cao luon la so chan de dong co khong bi nghen
+if ($targetHeight % 2 -ne 0) {
+    Write-Host "(!) Phat hien chieu cao la so le ($targetHeight). He thong tu dong tru di 1 pixel de vua mam dong co GPU..." -ForegroundColor Yellow
+    $targetHeight -= 1
+}
+
+# 5. Thuc thi
 $fileInfo = Get-Item $inputFile
-# FIX 1: Ep video dau ra ve chuan MP4 cho nhe va tuong thich tot nhat
 $outputFile = Join-Path -Path $fileInfo.DirectoryName -ChildPath ($fileInfo.BaseName + "_lite.mp4")
 
 Write-Host "Dang tien hanh ep xung video! Vui long doi..." -ForegroundColor Yellow
 
-$encoder = if ($env:FFMPEG_GPU_ENCODER) { $env:FFMPEG_GPU_ENCODER } else { "libx264" }
-
-# FIX 2: Gop chung viec scale (thay doi kich thuoc) voi viec chuyen he mau (format=yuv420p) de ho tro GPU
 $vfParams = "scale=-2:$targetHeight,format=yuv420p"
 
-Write-Host "Lenh thuc thi: ffmpeg -i video_goc -vf `"$vfParams`" -r $targetFps -c:v $encoder output_video" -ForegroundColor DarkGray
-
-# FIX 3: Dung Invoke-Expression va boc ngoac kep duong dan de khong bi loi neu thu muc co dau cach
-$ffmpegCmd = "ffmpeg -i `"$inputFile`" -vf `"$vfParams`" -r $targetFps -c:v $encoder -c:a aac -movflags +faststart `"$outputFile`""
+$ffmpegCmd = "ffmpeg -i `"$inputFile`" -vf `"$vfParams`" -r $targetFps -c:v $encoder $qualityParams -c:a aac -movflags +faststart `"$outputFile`""
 Invoke-Expression $ffmpegCmd
 
 if (Test-Path $outputFile) {
