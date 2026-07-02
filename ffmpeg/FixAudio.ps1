@@ -1,86 +1,86 @@
 Clear-Host
-Write-Host "=== SCRIPT 1: XUONG DO AM THANH (FIX LECH TIENG) ===" -ForegroundColor Cyan
+Write-Host "=== SCRIPT 1: AUDIO SYNCHRONIZATION (FIX AUDIO DELAY) ===" -ForegroundColor Cyan
 
-# 1. Nhan duong dan file tu sep
-$inputFile = Read-Host "Buoc 1: Keo tha file AVI can sua vao day (roi nhan Enter)"
+# 1. Get file path from user
+$inputFile = Read-Host "Step 1: Drag and drop the AVI file to fix here (then press Enter)"
 $inputFile = $inputFile.Trim('"').Trim("'")
 
 if (-not (Test-Path $inputFile)) {
-    Write-Host "Loi to roi: Khong tim thay file. Sep kiem tra lai duong dan nhe!" -ForegroundColor Red
-    Write-Host "Nhan Enter de thoat..."
+    Write-Host "Critical Error: File not found. Please check the path!" -ForegroundColor Red
+    Write-Host "Press Enter to exit..."
     Read-Host
     exit
 }
 
 Write-Host "------------------------------------------------"
-# 2. Nhan ty le dieu chinh
-Write-Host "Buoc 2: Nhap ty le am thanh can thay doi." -ForegroundColor Yellow
-Write-Host "- Co the nhap so thap phan (VD: 0.916)" -ForegroundColor DarkGray
-Write-Host "- Hoac nhap luon phan so cho le (VD: 55/60 hoac 60/55)" -ForegroundColor DarkGray
-Write-Host "- Bo trong va nhan Enter de dung mac dinh: 5.500/5.570" -ForegroundColor Green
+# 2. Get adjustment ratio
+Write-Host "Step 2: Enter the audio adjustment ratio." -ForegroundColor Yellow
+Write-Host "- You can enter a decimal (e.g., 0.916)" -ForegroundColor DarkGray
+Write-Host "- Or a fraction for precision (e.g., 55/60 or 60/55)" -ForegroundColor DarkGray
+Write-Host "- Leave blank and press Enter to use default: 5.500/5.570" -ForegroundColor Green
 
-$ratioInput = Read-Host "Moi sep nhap ty le"
+$ratioInput = Read-Host "Please enter the ratio"
 
-# Kiem tra neu bo trong (chi nhan Enter) thi gan gia tri mac dinh
+# Apply default if left blank
 if ([string]::IsNullOrWhiteSpace($ratioInput)) {
     $ratioInput = "5.500/5.570"
-    Write-Host "=> Da ap dung ty le mac dinh: $ratioInput" -ForegroundColor DarkCyan
+    Write-Host "=> Applied default ratio: $ratioInput" -ForegroundColor DarkCyan
 }
 
 $tempo = 1.0
 
-# Xu ly IQ 200: Doc hieu ca phan so lan so thap phan
+# Advanced Parsing: Handles both fractions and decimals
 try {
-    # Thay dau phay thanh dau cham de tranh loi format kieu Viet Nam
+    # Replace comma with dot to prevent formatting errors
     $ratioInput = $ratioInput.Replace(",", ".") 
     
     if ($ratioInput -match "/") {
         $parts = $ratioInput.Split("/")
-        $tuSo = [double]::Parse($parts[0].Trim())
-        $mauSo = [double]::Parse($parts[1].Trim())
-        $tempo = $tuSo / $mauSo
+        $numerator = [double]::Parse($parts[0].Trim())
+        $denominator = [double]::Parse($parts[1].Trim())
+        $tempo = $numerator / $denominator
     } else {
         $tempo = [double]::Parse($ratioInput.Trim())
     }
 } catch {
-    Write-Host "Loi: Dinh dang khong hop le! Nhap so hoac phan so thoi sep oi." -ForegroundColor Red
+    Write-Host "Error: Invalid format! Please enter a number or fraction." -ForegroundColor Red
     Read-Host
     exit
 }
 
-# FFmpeg filter atempo chi nhan gia tri tu 0.5 den 100
+# FFmpeg atempo filter only accepts values between 0.5 and 100
 if ($tempo -lt 0.5 -or $tempo -gt 100.0) {
-    Write-Host "Loi: FFmpeg chi cho phep ep xung am thanh trong khoang 0.5 (cham mot nua) den 100 (nhanh gap 100 lan)!" -ForegroundColor Red
+    Write-Host "Error: FFmpeg only allows audio scaling between 0.5 (half speed) and 100 (100x speed)!" -ForegroundColor Red
     Read-Host
     exit
 }
 
-# Chuyen ra so thap phan chuan de FFmpeg doc khong bi loi
+# Convert to standard decimal string to prevent FFmpeg parsing errors
 $tempoStr = [math]::Round($tempo, 6).ToString([cultureinfo]::InvariantCulture)
 
-Write-Host "=> Chot don: Ty le atempo may tinh ra la $tempoStr" -ForegroundColor Magenta
+Write-Host "=> Selection: Calculated atempo ratio is $tempoStr" -ForegroundColor Magenta
 Write-Host "------------------------------------------------"
 
-# 3. Xu ly ten file dau ra
+# 3. Handle output filename
 $fileInfo = Get-Item $inputFile
 $outputFile = Join-Path -Path $fileInfo.DirectoryName -ChildPath ($fileInfo.BaseName + "_synced" + $fileInfo.Extension)
 
-Write-Host "Dang khoi dong dong co FFmpeg! Tien hanh phau thuat am thanh..." -ForegroundColor DarkCyan
-Write-Host "Lenh: ffmpeg -i file_goc -filter:a `"atempo=$tempoStr`" -c:v copy file_dich" -ForegroundColor DarkGray
-Write-Host "Vui long doi trong giay lat..." -ForegroundColor Yellow
+Write-Host "Starting FFmpeg Engine! Commencing audio processing..." -ForegroundColor DarkCyan
+Write-Host "Command: ffmpeg -i original_file -filter:a `"atempo=$tempoStr`" -c:v copy output_file" -ForegroundColor DarkGray
+Write-Host "Please wait a moment..." -ForegroundColor Yellow
 
-# Thuc thi FFmpeg (chi render am thanh, copy giu nguyen hinh anh)
+# Execute FFmpeg (render audio only, copy video stream)
 ffmpeg -i $inputFile -filter:a "atempo=$tempoStr" -c:v copy $outputFile
 
 if (Test-Path $outputFile) {
     Write-Host ""
-    Write-Host "THANH CONG RUC RO! Da fix xong am thanh cho file cua sep." -ForegroundColor Green
-    Write-Host "Thanh pham o day: $outputFile" -ForegroundColor Cyan
+    Write-Host "SUCCESS! The audio has been synchronized successfully." -ForegroundColor Green
+    Write-Host "Output saved at: $outputFile" -ForegroundColor Cyan
 } else {
     Write-Host ""
-    Write-Host "Co loi khi render. Sep check lai xem file goc co dang bi phan mem khac khoa khong nhe!" -ForegroundColor Red
+    Write-Host "Rendering error. Please check if the original file is locked by another program!" -ForegroundColor Red
 }
 
 Write-Host ""
-Write-Host "Xong viec! Nhan Enter de thoat va chuyen sang file khac..." -ForegroundColor Cyan
+Write-Host "Task completed! Press Enter to exit and move to another file..." -ForegroundColor Cyan
 Read-Host

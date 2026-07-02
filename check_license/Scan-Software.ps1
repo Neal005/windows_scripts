@@ -1,9 +1,9 @@
 # ==============================================================================
-# SCRIPT QUET DAU HIEU PHAN MEM KHONG BAN QUYEN (V16.1 - LITERAL PATH FIX)
+# UNAUTHORIZED SOFTWARE DETECTION TOOL (V16.1 - LITERAL PATH FIX)
 # ==============================================================================
 
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "Dang yeu cau cap quyen Administrator de kiem tra..." -ForegroundColor Yellow
+    Write-Host "Requesting Administrator privileges to perform the check..." -ForegroundColor Yellow
     Start-Sleep -Seconds 1
     Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
     exit
@@ -11,10 +11,10 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
 
 Clear-Host
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "   CONG CU QUET DAU HIEU PHAN MEM KHONG BAN QUYEN (V16.1) " -ForegroundColor Cyan
+Write-Host "       UNAUTHORIZED SOFTWARE DETECTION TOOL (V16.1)       " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " -> Phien ban doc quyen: Quet Heuristic sau toan bo he thong." -ForegroundColor DarkGray
-Write-Host " -> Chu y: Thoi gian quet se lau do phai phan tich cau truc file.`n" -ForegroundColor DarkGray
+Write-Host " -> Exclusive feature: Deep Heuristic scan across the entire system." -ForegroundColor DarkGray
+Write-Host " -> Note: The scan may take a while due to structural analysis of files.`n" -ForegroundColor DarkGray
 
 $suspiciousExeList = @()
 $unsignedExeList = @()
@@ -25,24 +25,24 @@ $targetExtensions = @("*.exe", "*.dll")
 $validPathsToScan = @()
 
 # ------------------------------------------------------------------------------
-Write-Host "CHON CHE DO QUET:" -ForegroundColor White
-Write-Host " [1] Quet cac phan mem/game da cai dat (Tu dong tim qua Registry)" -ForegroundColor Yellow
-Write-Host " [2] Quet mot thu muc bat ky (Dung cho Game Copy/Portable)" -ForegroundColor Yellow
-$choice = Read-Host " -> Vui long nhap lua chon (1 hoac 2)"
+Write-Host "SELECT SCAN MODE:" -ForegroundColor White
+Write-Host " [1] Scan installed software/games (Automatically found via Registry)" -ForegroundColor Yellow
+Write-Host " [2] Scan a specific custom directory (For Portable/Copied Games)" -ForegroundColor Yellow
+$choice = Read-Host " -> Please enter your choice (1 or 2)"
 
 if ($choice -eq "2") {
-    $customPath = Read-Host " -> Nhap duong dan thu muc can quet (VD: C:\Program Files\Adobe)"
+    $customPath = Read-Host " -> Enter the directory path to scan (e.g., C:\Program Files\Adobe)"
     if (Test-Path -LiteralPath $customPath) {
         $cleanCustomPath = $customPath.Trim().TrimEnd('\')
-        $validPathsToScan += [PSCustomObject]@{ Name = "Thu muc Custom"; Path = $cleanCustomPath }
-        Write-Host "`n -> Da nhan duong dan. Dang chuan bi quet toan bo thu muc: $cleanCustomPath`n" -ForegroundColor Green
+        $validPathsToScan += [PSCustomObject]@{ Name = "Custom Directory"; Path = $cleanCustomPath }
+        Write-Host "`n -> Path accepted. Preparing to scan the entire directory: $cleanCustomPath`n" -ForegroundColor Green
     } else {
-        Write-Host "`n[!] Duong dan khong hop le hoac khong ton tai. Chuong trinh se thoat!" -ForegroundColor Red
-        Read-Host "Nhan Enter de thoat..."
+        Write-Host "`n[!] Invalid or non-existent path. The program will now exit!" -ForegroundColor Red
+        Read-Host "Press Enter to exit..."
         exit
     }
 } else {
-    Write-Host "`n[1] Dang thu thap toan bo duong dan cai dat tu Registry..." -ForegroundColor Yellow
+    Write-Host "`n[1] Collecting all installation paths from the Registry..." -ForegroundColor Yellow
     $registryPaths = @("HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*", "HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*", "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*")
     $installedApps = Get-ItemProperty $registryPaths -ErrorAction SilentlyContinue | Select-Object DisplayName, InstallLocation | Where-Object { $_.DisplayName -ne $null }
 
@@ -56,73 +56,73 @@ if ($choice -eq "2") {
     }
     
     $validPathsToScan = $validPathsToScan | Sort-Object -Property Path -Unique
-    Write-Host " -> Da tim thay $(($validPathsToScan).Count) thu muc doc lap de quet heuristic.`n" -ForegroundColor Green
+    Write-Host " -> Found $(($validPathsToScan).Count) independent directories for heuristic scanning.`n" -ForegroundColor Green
 }
 
 $totalApps = $validPathsToScan.Count
 if ($totalApps -eq 0) {
-    Write-Host "[!] Khong co gi de quet. Chuong trinh se thoat!" -ForegroundColor DarkYellow
-    Read-Host "Nhan Enter de thoat..."
+    Write-Host "[!] Nothing to scan. The program will now exit!" -ForegroundColor DarkYellow
+    Read-Host "Press Enter to exit..."
     exit
 }
 
 # ------------------------------------------------------------------------------
-Write-Host "[2] BAT DAU PHAN TICH CAU TRUC VA DAU HIEU BAT THUONG..." -ForegroundColor Yellow
+Write-Host "[2] STARTING STRUCTURAL ANALYSIS AND ANOMALY DETECTION..." -ForegroundColor Yellow
 
 $counter = 0
 foreach ($app in $validPathsToScan) {
     $counter++
     $percent = [math]::Round(($counter / $totalApps) * 100)
-    Write-Progress -Activity "Dang phan tich he thong ($counter/$totalApps)" -Status "Dang xu ly: $($app.Name)" -PercentComplete $percent
+    Write-Progress -Activity "Analyzing system ($counter/$totalApps)" -Status "Processing: $($app.Name)" -PercentComplete $percent
     
     $targetPath = $app.Path
     if (-not $targetPath.EndsWith("\")) { $targetPath += "\" }
     $targetPath += "*"
 
-    # Fix -LiteralPath cho Get-ChildItem bang cach dung -Path ket hop voi ten thu muc goc
+    # Use LiteralPath fix for Get-ChildItem with base folder name
     $emuFiles = Get-ChildItem -Path $targetPath -Include $emulatorConfigs -Recurse -ErrorAction SilentlyContinue
     if ($emuFiles) {
         foreach ($emu in $emuFiles) {
-            Write-Host " -> [PHAT HIEN] File moi truong gia lap / rac crack: $($emu.Name)" -ForegroundColor Red
-            $suspiciousExeList += "[Rac Crack] $($emu.FullName)"
+            Write-Host " -> [DETECTED] Emulator environment / crack artifact: $($emu.Name)" -ForegroundColor Red
+            $suspiciousExeList += "[Crack Artifact] $($emu.FullName)"
         }
     }
 
     $executables = Get-ChildItem -Path $targetPath -Include $targetExtensions -Recurse -ErrorAction SilentlyContinue
     foreach ($exe in $executables) {
-        # FIX CHI MANG: Thay -FilePath bang -LiteralPath de chong loi ngoac vuong []
+        # FATAL FIX: Replace -FilePath with -LiteralPath to prevent square bracket [] errors
         $sig = Get-AuthenticodeSignature -LiteralPath $exe.FullName -ErrorAction SilentlyContinue
         
         if ($sig.Status -eq 'HashMismatch') {
-            Write-Host " -> [PHAT HIEN] File co dau hieu loi / ma doc crack: $($exe.Name)" -ForegroundColor Red
-            $suspiciousExeList += "[File Loi/Crack] $($exe.FullName)"
+            Write-Host " -> [DETECTED] File with error or crack malware signature: $($exe.Name)" -ForegroundColor Red
+            $suspiciousExeList += "[Corrupted/Crack File] $($exe.FullName)"
         } elseif ($sig.Status -eq 'NotSigned' -and $exe.Extension -match "(?i)\.exe$") {
-            Write-Host " -> [NGHI VAN] File khong ro nguon goc / can kiem tra them: $($exe.Name)" -ForegroundColor DarkYellow
-            $unsignedExeList += "[Nghi Van] $($exe.FullName)"
+            Write-Host " -> [SUSPICIOUS] Unverified origin / requires further checking: $($exe.Name)" -ForegroundColor DarkYellow
+            $unsignedExeList += "[Suspicious] $($exe.FullName)"
         }
     }
 }
-Write-Progress -Activity "Dang phan tich he thong" -Completed
+Write-Progress -Activity "Analyzing system" -Completed
 
 # ------------------------------------------------------------------------------
 $suspiciousExeList = $suspiciousExeList | Where-Object { $_ -ne $null }
 $unsignedExeList = $unsignedExeList | Where-Object { $_ -ne $null }
 
-$finalEmuCount = @($suspiciousExeList | Where-Object { $_ -match "Rac Crack" }).Count
-$finalSigCount = @($suspiciousExeList | Where-Object { $_ -match "File Loi/Crack" }).Count
+$finalEmuCount = @($suspiciousExeList | Where-Object { $_ -match "Crack Artifact" }).Count
+$finalSigCount = @($suspiciousExeList | Where-Object { $_ -match "Corrupted/Crack File" }).Count
 $finalUnsignedCount = $unsignedExeList.Count
 
 Write-Host "`n==========================================================" -ForegroundColor Cyan
-Write-Host "   BANG TONG KET SO LIEU PHAN TICH                        " -ForegroundColor Cyan
+Write-Host "          ANALYSIS SUMMARY AND METRICS                    " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
-Write-Host " [1] Moi truong gia lap / rac: $finalEmuCount muc phat hien" -ForegroundColor Red
-Write-Host " [2] Tap tin loi / ma doc    : $finalSigCount muc phat hien" -ForegroundColor Red
-Write-Host " [3] Tap tin chua xac thuc   : $finalUnsignedCount muc nghi van" -ForegroundColor Yellow
+Write-Host " [1] Emulator environment / Junk : $finalEmuCount detected items" -ForegroundColor Red
+Write-Host " [2] Corrupted / Malware files   : $finalSigCount detected items" -ForegroundColor Red
+Write-Host " [3] Unauthenticated files       : $finalUnsignedCount suspicious items" -ForegroundColor Yellow
 Write-Host "----------------------------------------------------------"
 
 if ($suspiciousExeList.Count -gt 0) {
-    Write-Host " DANH SACH TAP TIN NGUY HIEM / DAU HIEU CRACK (DO):" -ForegroundColor Red
+    Write-Host " LIST OF DANGEROUS / CRACK DETECTED FILES (RED):" -ForegroundColor Red
     foreach ($exePath in $suspiciousExeList) {
         Write-Host "  -> $exePath" -ForegroundColor DarkRed
     }
@@ -130,7 +130,7 @@ if ($suspiciousExeList.Count -gt 0) {
 }
 
 if ($finalUnsignedCount -gt 0) {
-    Write-Host " DANH SACH TAP TIN KHONG RO NGUON GOC (VANG):" -ForegroundColor Yellow
+    Write-Host " LIST OF UNVERIFIED FILES (YELLOW):" -ForegroundColor Yellow
     foreach ($exePath in $unsignedExeList) {
         Write-Host "  -> $exePath" -ForegroundColor DarkYellow
     }
@@ -138,13 +138,13 @@ if ($finalUnsignedCount -gt 0) {
 }
 
 if (($finalSigCount + $finalEmuCount) -gt 0) {
-    Write-Host " [!] KET LUAN: HE THONG CO CHUA PHAN MEM / GAME DA BI CAN THIEP!" -ForegroundColor Red
+    Write-Host " [!] CONCLUSION: THE SYSTEM CONTAINS TAMPERED SOFTWARE/GAMES!" -ForegroundColor Red
 } elseif ($finalUnsignedCount -gt 0) {
-    Write-Host " [?] KET LUAN: CO CHUA TAP TIN DANG NGO. CAN RA SOAT THU CONG!" -ForegroundColor DarkYellow
+    Write-Host " [?] CONCLUSION: SUSPICIOUS FILES FOUND. MANUAL REVIEW REQUIRED!" -ForegroundColor DarkYellow
 } else {
-    Write-Host " [v] KET LUAN: MAY TINH HOAN TOAN SACH SE, CHUAN THANH BACH!" -ForegroundColor Green
+    Write-Host " [v] CONCLUSION: THE SYSTEM IS COMPLETELY CLEAN AND GENUINE!" -ForegroundColor Green
 }
 
 Write-Host "==========================================================`n"
 
-Read-Host -Prompt "Nhan Enter de thoat chuong trinh..."
+Read-Host -Prompt "Press Enter to exit the program..."

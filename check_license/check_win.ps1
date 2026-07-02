@@ -1,12 +1,12 @@
-# Tu dong xin quyen Administrator neu chua co
+# Automatically request Administrator privileges if missing
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "Dang yeu cau cap quyen Administrator de kiem tra..." -ForegroundColor Yellow
+    Write-Host "Requesting Administrator privileges to check system..." -ForegroundColor Yellow
     Start-Sleep -Seconds 1
     Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
     exit
 }
 
-# Lay thong tin he thong chi tiet
+# Get detailed system information
 $osInfo = Get-WmiObject -Class Win32_OperatingSystem
 $osName = $osInfo.Caption.Trim()
 $osVersion = $osInfo.Version
@@ -14,31 +14,31 @@ $osArchitecture = $osInfo.OSArchitecture
 
 Clear-Host
 Write-Host "================================================" -ForegroundColor Cyan
-Write-Host "THONG TIN HE THONG:" -ForegroundColor Cyan
-Write-Host "  - Phien ban: $osName" -ForegroundColor White
-Write-Host "  - Build:     $osVersion ($osArchitecture)" -ForegroundColor White
+Write-Host "SYSTEM INFORMATION:" -ForegroundColor Cyan
+Write-Host "  - Version: $osName" -ForegroundColor White
+Write-Host "  - Build:   $osVersion ($osArchitecture)" -ForegroundColor White
 Write-Host "================================================" -ForegroundColor Cyan
 
-Write-Host "`nDang quet trang thai ban quyen he thong..." -ForegroundColor White
+Write-Host "`nScanning system license status..." -ForegroundColor White
 
-# Goi ngam slmgr.vbs
+# Silently run slmgr.vbs
 $slmgrPath = "$env:SystemRoot\System32\slmgr.vbs"
 $dliOutput = (cscript.exe //nologo $slmgrPath /dli) -join "`n"
 $xprOutput = (cscript.exe //nologo $slmgrPath /xpr) -join "`n"
 
-# Phan tich co trang thai va loai giay phep
+# Analyze status and license type
 $isGenuineChannel = $false
-$licenseType = "Khong ro"
+$licenseType = "Unknown"
 
 if ($dliOutput -match "RETAIL") {
     $isGenuineChannel = $true
-    $licenseType = "Retail (Ban le)"
+    $licenseType = "Retail"
 } elseif ($dliOutput -match "OEM") {
     $isGenuineChannel = $true
-    $licenseType = "OEM (Theo may)"
+    $licenseType = "OEM (System Bound)"
 } elseif ($dliOutput -match "VOLUME_MAK") {
     $isGenuineChannel = $true
-    $licenseType = "Volume MAK (Key Doanh nghiep)"
+    $licenseType = "Volume MAK (Enterprise Key)"
 }
 
 $isKmsChannel = ($dliOutput -match "VOLUME_KMSCLIENT")
@@ -47,24 +47,24 @@ $isPermanent = ($xprOutput -match "permanently activated" -or $xprOutput -match 
 Write-Host "------------------------------------------------" -ForegroundColor Cyan
 
 if ($isGenuineChannel -and $isPermanent) {
-    Write-Host "[+] KET QUA: WINDOWS BAN QUYEN CHINH HANG (XIN)" -ForegroundColor Green
-    Write-Host "    - Loai giay phep: $licenseType" -ForegroundColor Green
-    Write-Host "    - Trang thai: Kich hoat vinh vien" -ForegroundColor Green
+    Write-Host "[+] RESULT: GENUINE WINDOWS LICENSE" -ForegroundColor Green
+    Write-Host "    - License Type: $licenseType" -ForegroundColor Green
+    Write-Host "    - Status: Permanently Activated" -ForegroundColor Green
 } elseif ($isKmsChannel) {
-    Write-Host "[!] KET QUA: GIAY PHEP DOANH NGHIEP (KMS)" -ForegroundColor Yellow
-    Write-Host "    - Loai giay phep: Volume KMS Client" -ForegroundColor Yellow
-    Write-Host "    - Luu y: Kich hoat qua may chu (Server)." -ForegroundColor Yellow
-    Write-Host "      + Neu la may ca nhan o nha: 99% la dung hang Crack (KMSpico...)." -ForegroundColor Yellow
-    Write-Host "      + Neu la may cong ty: Day co the la ban quyen xin cua to chuc!" -ForegroundColor Yellow
+    Write-Host "[!] RESULT: ENTERPRISE LICENSE (KMS)" -ForegroundColor Yellow
+    Write-Host "    - License Type: Volume KMS Client" -ForegroundColor Yellow
+    Write-Host "    - Note: Activated via server." -ForegroundColor Yellow
+    Write-Host "      + If this is a personal PC: Likely using cracked software (e.g., KMSpico)." -ForegroundColor Yellow
+    Write-Host "      + If this is a corporate PC: This might be a genuine organization license." -ForegroundColor Yellow
 } elseif (-not $isPermanent -and ($xprOutput -match "expire" -or $xprOutput -match "het han")) {
-    Write-Host "[-] KET QUA: WINDOWS CRACK (LAU) / GIAY PHEP HET HAN" -ForegroundColor Red
-    Write-Host "    - Loai giay phep: Khong xac dinh hoac da het thoi han" -ForegroundColor Red
+    Write-Host "[-] RESULT: UNAUTHORIZED (CRACKED) WINDOWS / EXPIRED LICENSE" -ForegroundColor Red
+    Write-Host "    - License Type: Unknown or Expired" -ForegroundColor Red
 } else {
-    Write-Host "[!] KET QUA: KHONG RO RANG" -ForegroundColor DarkYellow
-    Write-Host "    - Vui long kiem tra thu cong tai:" -ForegroundColor DarkYellow
+    Write-Host "[!] RESULT: AMBIGUOUS STATUS" -ForegroundColor DarkYellow
+    Write-Host "    - Please manually check at:" -ForegroundColor DarkYellow
     Write-Host "      Settings > System > Activation" -ForegroundColor DarkYellow
 }
 
 Write-Host "------------------------------------------------" -ForegroundColor Cyan
-Write-Host "`nNhan phim bat ky de thoat..." -ForegroundColor White
+Write-Host "`nPress any key to exit..." -ForegroundColor White
 $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')

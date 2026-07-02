@@ -2,43 +2,43 @@ param (
     [string]$FilePath = ""
 )
 
-# Xoa sach man hinh cho thanh bach
+# Clear the screen for a clean output
 Clear-Host
 
-# IN TIEU DE NGAY KHI VUA MO
+# PRINT HEADER UPON OPENING
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host "      SCRIPT XOA SACH METADATA V1.0      " -ForegroundColor Red
+Write-Host "      METADATA REMOVAL SCRIPT V1.0       " -ForegroundColor Red
 Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Neu chua co duong dan thi hien thong bao yeu cau nhap/keo tha
+# If no path provided, prompt user to enter/drag-and-drop
 if ([string]::IsNullOrWhiteSpace($FilePath)) {
-    $FilePath = Read-Host "Vui long nhap (hoac keo tha) duong dan file vao day"
+    $FilePath = Read-Host "Please enter (or drag and drop) the file path here"
 }
 
-# Tu dong loai bo dau ngoac kep neu sep keo tha file vao
+# Automatically remove quotes if drag-and-dropped
 $FilePath = $FilePath.Trim('"', "'")
 
-# Kiem tra xem file co ton tai khong
+# Check if file exists
 if (Test-Path $FilePath) {
     Write-Host ""
-    Write-Host " DANG XOA SACH METADATA CHO FILE: " -NoNewline -ForegroundColor Cyan
+    Write-Host " REMOVING ALL METADATA FOR FILE: " -NoNewline -ForegroundColor Cyan
     Write-Host $FilePath -ForegroundColor Yellow
     Write-Host "-----------------------------------------" -ForegroundColor Cyan
     
-    # Goi exiftool de xoa tat ca metadata va ghi de thang len file goc
+    # Call exiftool to remove all metadata and overwrite the original file
     exiftool -all= -overwrite_original $FilePath
     
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "Tuyet voi! File da duoc lam thanh bach hoan toan." -ForegroundColor Green
+        Write-Host "Excellent! The file has been completely cleansed." -ForegroundColor Green
     } else {
-        Write-Host "Co loi xay ra trong qua trinh xu ly cua ExifTool." -ForegroundColor Red
+        Write-Host "An error occurred during the ExifTool process." -ForegroundColor Red
     }
 } else {
     Write-Host ""
-    Write-Host "Loi: Khong tim thay file tai duong dan '$FilePath'. Sep vui long kiem tra lai." -ForegroundColor Red
+    Write-Host "Error: File not found at path '$FilePath'. Please check again." -ForegroundColor Red
 }
 
 Write-Host ""
-# Dung man hinh de xem ket qua
-Read-Host -Prompt "Nhan Enter de thoat"
+# Keep window open to view results
+Read-Host -Prompt "Press Enter to exit"

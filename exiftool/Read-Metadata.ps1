@@ -1,42 +1,42 @@
 param (
-    # Khong dung Mandatory nua de script chay thang vao trong
+    # Removed Mandatory to allow script to proceed to prompt
     [string]$FilePath = ""
 )
 
-# Xoa sach man hinh cho thanh bach
+# Clear the screen for a clean output
 Clear-Host
 
-# IN TIEU DE NGAY KHI VUA MO
+# PRINT HEADER UPON OPENING
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host "       SCRIPT DOC METADATA (EXIFTOOL)    " -ForegroundColor Green
+Write-Host "       METADATA READER (EXIFTOOL)        " -ForegroundColor Green
 Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Neu chua co duong dan thi hien thong bao yeu cau nhap/keo tha
+# If no path provided, prompt user to enter/drag-and-drop
 if ([string]::IsNullOrWhiteSpace($FilePath)) {
-    $FilePath = Read-Host "Vui long nhap (hoac keo tha) duong dan file vao day"
+    $FilePath = Read-Host "Please enter (or drag and drop) the file path here"
 }
 
-# Tu dong loai bo dau ngoac kep neu sep keo tha file vao
+# Automatically remove quotes if drag-and-dropped
 $FilePath = $FilePath.Trim('"', "'")
 
-# Kiem tra xem file co ton tai khong
+# Check if file exists
 if (Test-Path $FilePath) {
     Write-Host ""
-    Write-Host " DANG DOC METADATA CHO FILE: " -NoNewline -ForegroundColor Cyan
+    Write-Host " READING METADATA FOR FILE: " -NoNewline -ForegroundColor Cyan
     Write-Host $FilePath -ForegroundColor Yellow
     Write-Host "-----------------------------------------" -ForegroundColor Cyan
     
-    # Goi exiftool de doc thong tin
+    # Call exiftool to read metadata
     exiftool $FilePath
     
     Write-Host "-----------------------------------------" -ForegroundColor Cyan
-    Write-Host " Hoan tat qua trinh doc." -ForegroundColor Green
+    Write-Host " Reading process completed." -ForegroundColor Green
 } else {
     Write-Host ""
-    Write-Host "Loi: Khong tim thay file tai duong dan '$FilePath'. Sep vui long kiem tra lai." -ForegroundColor Red
+    Write-Host "Error: File not found at path '$FilePath'. Please check again." -ForegroundColor Red
 }
 
 Write-Host ""
-# Dung man hinh de sep doc thong tin
-Read-Host -Prompt "Nhan Enter de thoat"
+# Keep window open to read information
+Read-Host -Prompt "Press Enter to exit"

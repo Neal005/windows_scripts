@@ -1,13 +1,13 @@
 Clear-Host
-Write-Host "=== TRAM CHI HUY FFMPEG TONG HOP (MASTER HUB) ===" -ForegroundColor Cyan
+Write-Host "=== FFMPEG COMMAND CENTER (MASTER HUB) ===" -ForegroundColor Cyan
 
-# 1. Quet phan cung he thong de lay so ma
-Write-Host "Dang kiem tra vu khi hang nang tren he thong..." -ForegroundColor DarkCyan
+# 1. Scan system hardware for encoders
+Write-Host "Scanning system for hardware acceleration..." -ForegroundColor DarkCyan
 $gpus = Get-CimInstance Win32_VideoController
 $gpuNames = $gpus.Name
 
 $encoder = "libx264"
-$techName = "CPU (Cham nhat)"
+$techName = "CPU (Slowest)"
 
 if ($gpuNames -match "NVIDIA") {
     $encoder = "h264_nvenc"
@@ -20,50 +20,63 @@ if ($gpuNames -match "NVIDIA") {
     $techName = "Intel QuickSync"
 }
 
-# Day bien encoder vao moi truong de cac script con (neu can) co the dung xai
+# Export encoder variable to environment for child scripts
 [Environment]::SetEnvironmentVariable("FFMPEG_GPU_ENCODER", $encoder, "Process")
 
-Write-Host "-> Phat hien dong co: $techName" -ForegroundColor Magenta
+Write-Host "-> Engine detected: $techName" -ForegroundColor Magenta
 Write-Host "------------------------------------------------"
 
-# 2. Vong lap trung tam (Dock Station)
+# 2. Central Loop (Dock Station)
+$scriptDir = $PSScriptRoot
+if (-not $scriptDir) { $scriptDir = (Get-Item -Path ".\").FullName }
+
 while ($true) {
     Write-Host ""
-    Write-Host ">>> TRAM CHI HUY DANG CHO LENH <<<" -ForegroundColor Yellow
-    Write-Host "- Sep keo tha Script 1, 2 hoac 3 (.ps1) vao day de bat dau luong cong viec." -ForegroundColor White
-    $droppedItem = Read-Host "- Hoac go 'exit' de thoat"
+    Write-Host ">>> COMMAND CENTER AWAITING ORDERS <<<" -ForegroundColor Yellow
+    Write-Host "- Enter the corresponding [Number] to run a script." -ForegroundColor White
+    Write-Host "- Enter [e] or [exit] to quit." -ForegroundColor White
+    Write-Host "------------------------------------------------"
+
+    # Get the list of ps1 files (excluding this menu file)
+    $files = Get-ChildItem -Path $scriptDir -File -Filter "*.ps1" | Where-Object { $_.Name -ne $MyInvocation.MyCommand.Name }
+
+    $menuMap = @{}
+    $index = 1
+
+    # List files
+    foreach ($f in $files) {
+        Write-Host " $index. [Script] $($f.Name)" -ForegroundColor Green
+        $menuMap["$index"] = $f
+        $index++
+    }
+
+    Write-Host " e. Exit" -ForegroundColor Red
+    Write-Host "------------------------------------------------"
+
+    $choice = Read-Host "Select an option"
     
-    if ($droppedItem.ToLower() -eq 'exit') {
-        Write-Host "Dang dong dong co. Chuc sep mot ngay thanh bach!" -ForegroundColor DarkGray
+    if ($choice -match "^(e|exit)$") {
+        Write-Host "Shutting down engines. Have a productive day!" -ForegroundColor DarkGray
         break
     }
 
-    # Lam sach duong dan neu co dau nhay kep
-    $droppedItem = $droppedItem.Trim('"').Trim("'")
-
-    if (-not (Test-Path $droppedItem)) {
-        Write-Host "Loi: Khong tim thay file! Sep co keo nham khong day?" -ForegroundColor Red
-        continue
+    if ($menuMap.ContainsKey($choice)) {
+        $selected = $menuMap[$choice]
+        
+        Write-Host "------------------------------------------------"
+        Write-Host "Activating workflow: $($selected.Name)" -ForegroundColor Green
+        Start-Sleep -Seconds 1
+        
+        # Execute child script
+        & $selected.FullName
+        
+        # Restart Hub after child script finishes
+        Clear-Host
+        Write-Host "=== FFMPEG COMMAND CENTER (MASTER HUB) ===" -ForegroundColor Cyan
+        Write-Host "-> Current Engine: $techName" -ForegroundColor Magenta
+        Write-Host "=> Previous workflow ($($selected.Name)) completed successfully!" -ForegroundColor Green
+        Write-Host "------------------------------------------------"
+    } else {
+        Write-Host "Invalid selection. Please try again." -ForegroundColor Red
     }
-
-    # Bat loi neu sep lo tay keo video vao thay vi script
-    if ($droppedItem -notmatch "\.ps1$") {
-        Write-Host "Loi to roi: Tram chi huy chi nhan lenh tu cac file Script (.ps1) thoi nhe!" -ForegroundColor Red
-        Write-Host "Sep keo file ps1 vao day, con video thi ty nua keo vao cua so cua script do." -ForegroundColor Red
-        continue
-    }
-
-    Write-Host "------------------------------------------------"
-    Write-Host "Dang kich hoat luong cong viec: $droppedItem" -ForegroundColor Green
-    Start-Sleep -Seconds 1
-    
-    # Thuc thi file script con
-    & $droppedItem
-    
-    # Sau khi script con chay xong (bam Enter de thoat ra), Hub se khoi dong lai
-    Clear-Host
-    Write-Host "=== TRAM CHI HUY FFMPEG TONG HOP (MASTER HUB) ===" -ForegroundColor Cyan
-    Write-Host "-> Dong co hien tai: $techName" -ForegroundColor Magenta
-    Write-Host "=> Luong cong viec truoc do da hoan tat thanh cong!" -ForegroundColor Green
-    Write-Host "------------------------------------------------"
 }

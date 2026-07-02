@@ -1,25 +1,25 @@
 Clear-Host
-Write-Host "=== SCRIPT 3: EP XUNG VIDEO (GIAM DO PHAN GIAI & FPS) ===" -ForegroundColor Cyan
+Write-Host "=== SCRIPT 3: VIDEO DOWNSCALING (REDUCE RESOLUTION & FPS) ===" -ForegroundColor Cyan
 
-# Kiem tra FFmpeg
+# Check FFmpeg
 if (-not (Get-Command "ffmpeg" -ErrorAction SilentlyContinue) -or -not (Get-Command "ffprobe" -ErrorAction SilentlyContinue)) {
-    Write-Host "Loi to roi sep oi: Khong tim thay ffmpeg hoac ffprobe!" -ForegroundColor Red
-    Write-Host "Nhan Enter de thoat..."
+    Write-Host "Critical Error: FFmpeg or FFprobe not found!" -ForegroundColor Red
+    Write-Host "Press Enter to exit..."
     Read-Host
     exit
 }
 
-# 1. Nhan file video
-$inputFile = Read-Host "Buoc 1: Keo tha file video can giam dung luong vao day"
+# 1. Get video input
+$inputFile = Read-Host "Step 1: Drag and drop the video file to downscale here"
 $inputFile = $inputFile.Trim('"').Trim("'")
 
 if (-not (Test-Path $inputFile)) {
-    Write-Host "Khong tim thay file. Vui long kiem tra lai duong dan!" -ForegroundColor Red
+    Write-Host "File not found. Please check the path!" -ForegroundColor Red
     Read-Host
     exit
 }
 
-Write-Host "Dang quet thong so video goc..." -ForegroundColor DarkCyan
+Write-Host "Scanning original video properties..." -ForegroundColor DarkCyan
 
 $origHeight = [int](ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "`"$inputFile`"")
 $origFpsStr = ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 "`"$inputFile`""
@@ -27,70 +27,70 @@ $origFpsStr = ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_
 $fpsParts = $origFpsStr.Split('/')
 $origFps = [math]::Round([double]$fpsParts[0] / [double]$fpsParts[1], 2)
 
-Write-Host "=> Phat hien video goc: ${origHeight}p voi $origFps FPS" -ForegroundColor Green
+Write-Host "=> Original Video: ${origHeight}p at $origFps FPS" -ForegroundColor Green
 Write-Host "------------------------------------------------"
 
-# 2. Nhap do phan giai moi
+# 2. Enter new resolution
 $targetHeight = $origHeight
 while ($true) {
-    $inputHeight = Read-Host "Buoc 2: Nhap chieu cao video muon giam (VD: 720). Nhan Enter de giu nguyen [$origHeight]"
+    $inputHeight = Read-Host "Step 2: Enter target height (e.g., 720). Press Enter to keep original [$origHeight]"
     if ([string]::IsNullOrWhiteSpace($inputHeight)) {
-        Write-Host "-> Chot don: Giu nguyen ${origHeight}p" -ForegroundColor Magenta
+        Write-Host "-> Selection: Keeping original ${origHeight}p" -ForegroundColor Magenta
         break
     }
     if ([int]::TryParse($inputHeight, [ref]$null)) {
         $h = [int]$inputHeight
         if ($h -gt $origHeight) {
-            Write-Host "Canh bao: Sep dang buff chieu cao vuot muc goc! Nhap lai nhe." -ForegroundColor Red
+            Write-Host "Warning: Target height exceeds original! Please enter a smaller value." -ForegroundColor Red
         } elseif ($h -le 0) {
-            Write-Host "Loi: So am hoac bang 0 lam sao chay duoc ha sep!" -ForegroundColor Red
+            Write-Host "Error: Value must be greater than zero!" -ForegroundColor Red
         } else {
             $targetHeight = $h
-            Write-Host "-> Chot don: Ep xuong ${targetHeight}p" -ForegroundColor Magenta
+            Write-Host "-> Selection: Downscaling to ${targetHeight}p" -ForegroundColor Magenta
             break
         }
     } else {
-        Write-Host "Vui long nhap so nguyen!" -ForegroundColor Red
+        Write-Host "Please enter a valid integer!" -ForegroundColor Red
     }
 }
 Write-Host "------------------------------------------------"
 
-# 3. Nhap FPS moi
+# 3. Enter new FPS
 $targetFps = $origFps
 while ($true) {
-    $inputFps = Read-Host "Buoc 3: Nhap FPS muon giam (VD: 30). Nhan Enter de giu nguyen [$origFps]"
+    $inputFps = Read-Host "Step 3: Enter target FPS (e.g., 30). Press Enter to keep original [$origFps]"
     if ([string]::IsNullOrWhiteSpace($inputFps)) {
-        Write-Host "-> Chot don: Giu nguyen $origFps FPS" -ForegroundColor Magenta
+        Write-Host "-> Selection: Keeping original $origFps FPS" -ForegroundColor Magenta
         break
     }
     if ([double]::TryParse($inputFps, [ref]$null)) {
         $f = [double]$inputFps
         if ($f -gt $origFps) {
-            Write-Host "Canh bao: FPS moi vuot tran FPS goc! Nhap nho hon hoac bang." -ForegroundColor Red
+            Write-Host "Warning: Target FPS exceeds original! Please enter a smaller or equal value." -ForegroundColor Red
         } elseif ($f -le 0) {
-            Write-Host "Khung hinh be hon 0 la di lui do sep! Nhap lai nhe." -ForegroundColor Red
+            Write-Host "Error: FPS must be greater than zero!" -ForegroundColor Red
         } else {
             $targetFps = $f
-            Write-Host "-> Chot don: Ep xuong $targetFps FPS" -ForegroundColor Magenta
+            Write-Host "-> Selection: Downscaling to $targetFps FPS" -ForegroundColor Magenta
             break
         }
     } else {
-        Write-Host "Vui long nhap so thoi sep oi!" -ForegroundColor Red
+        Write-Host "Please enter a valid number!" -ForegroundColor Red
     }
 }
 Write-Host "------------------------------------------------"
 
-# 4. Menu Lua chon Ep can (IQ 200)
-Write-Host "Buoc 4: Chot don chat luong hinh anh (bitrate)" -ForegroundColor Yellow
-Write-Host "[1] Ep can thanh bach (Dung luong nho nhat cho do phan giai nay - Mac dinh)" -ForegroundColor White
-Write-Host "[2] Giu net bo doi (Net cang tung pixel ở muc ${targetHeight}p)" -ForegroundColor White
-$qualityChoice = Read-Host "Moi sep chon (1 hoac 2. Bam Enter de chon 1)"
+# 4. Select Compression Quality
+Write-Host "Step 4: Select image quality (bitrate)" -ForegroundColor Yellow
+Write-Host "[1] Standard Compression (Smallest file size for this resolution - Default)" -ForegroundColor White
+Write-Host "[2] High Quality (Maximum sharpness at ${targetHeight}p)" -ForegroundColor White
+$qualityChoice = Read-Host "Please select (1 or 2. Press Enter for 1)"
 
 $encoder = if ($env:FFMPEG_GPU_ENCODER) { $env:FFMPEG_GPU_ENCODER } else { "libx264" }
 $qualityParams = ""
 
 if ($qualityChoice -eq '2') {
-    Write-Host "=> Da chot: Giu net bo doi! Dang nap dan xuyen giap cho dong co $encoder..." -ForegroundColor Magenta
+    Write-Host "=> Selected: High Quality! Preparing encoder parameters for $encoder..." -ForegroundColor Magenta
     if ($encoder -match "nvenc") {
         $qualityParams = "-rc vbr -cq 22 -preset p6"
     } elseif ($encoder -match "amf") {
@@ -101,22 +101,22 @@ if ($qualityChoice -eq '2') {
         $qualityParams = "-crf 22"
     }
 } else {
-    Write-Host "=> Da chot: Ep can giam mo! De FFmpeg tu dong bop bitrate..." -ForegroundColor Magenta
+    Write-Host "=> Selected: Standard Compression! Allowing FFmpeg to auto-adjust bitrate..." -ForegroundColor Magenta
 }
 
 Write-Host "------------------------------------------------"
 
-# FIX IQ 200: Dam bao chieu cao luon la so chan de dong co khong bi nghen
+# Ensure height is an even number to prevent encoder errors
 if ($targetHeight % 2 -ne 0) {
-    Write-Host "(!) Phat hien chieu cao la so le ($targetHeight). He thong tu dong tru di 1 pixel de vua mam dong co GPU..." -ForegroundColor Yellow
+    Write-Host "(!) Detected odd height value ($targetHeight). Automatically subtracting 1 pixel for encoder compatibility..." -ForegroundColor Yellow
     $targetHeight -= 1
 }
 
-# 5. Thuc thi
+# 5. Execute
 $fileInfo = Get-Item $inputFile
 $outputFile = Join-Path -Path $fileInfo.DirectoryName -ChildPath ($fileInfo.BaseName + "_lite.mp4")
 
-Write-Host "Dang tien hanh ep xung video! Vui long doi..." -ForegroundColor Yellow
+Write-Host "Downscaling video... Please wait." -ForegroundColor Yellow
 
 $vfParams = "scale=-2:$targetHeight,format=yuv420p"
 
@@ -125,13 +125,13 @@ Invoke-Expression $ffmpegCmd
 
 if (Test-Path $outputFile) {
     Write-Host ""
-    Write-Host "HOAN TAT! Video da duoc ep mo thanh cong." -ForegroundColor Green
-    Write-Host "File nam chinh inh o day: $outputFile" -ForegroundColor Cyan
+    Write-Host "COMPLETED! Video successfully downscaled." -ForegroundColor Green
+    Write-Host "Output saved at: $outputFile" -ForegroundColor Cyan
 } else {
     Write-Host ""
-    Write-Host "Loi roi! Khong thay file dau ra. Sep kiem tra lai qua trinh render nhe." -ForegroundColor Red
+    Write-Host "Error: Output file not found. Please check the rendering process." -ForegroundColor Red
 }
 
 Write-Host ""
-Write-Host "Nhan Enter de thoat va tiep tuc su nghiep..." -ForegroundColor Cyan
+Write-Host "Press Enter to exit..." -ForegroundColor Cyan
 Read-Host
