@@ -44,7 +44,7 @@ $workDir = $videoFiles[0].DirectoryName
 Set-Location -Path $workDir
 
 # 2. Create temporary list file
-$listFile = "temp_list.txt"
+$listFile = Join-Path -Path $workDir -ChildPath "temp_list.txt"
 $listContent = $videoFiles | ForEach-Object { 
     $safePath = $_.FullName -replace "'", "'\''"
     "file '$safePath'" 
@@ -92,7 +92,7 @@ Write-Host "------------------------------------------------"
 Write-Host "Concatenating files and encoding to MP4 format..." -ForegroundColor DarkCyan
 
 # 5. Build and execute command
-$ffmpegCmd = "ffmpeg -f concat -safe 0 -i $listFile $vfParams -c:v $encoder $qualityParams -c:a aac -movflags +faststart `"$outputMp4`""
+$ffmpegCmd = "ffmpeg -f concat -safe 0 -i `"$listFile`" $vfParams -c:v $encoder $qualityParams -c:a aac -movflags +faststart `"$outputMp4`""
 Invoke-Expression $ffmpegCmd
 
 # 6. Cleanup
