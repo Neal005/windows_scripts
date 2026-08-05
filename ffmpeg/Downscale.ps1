@@ -22,7 +22,7 @@ if (-not (Test-Path $inputFile)) {
 Write-Host "Scanning original video properties..." -ForegroundColor DarkCyan
 
 $origHeight = [int](ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "`"$inputFile`"")
-$origFpsStr = ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 "`"$inputFile`""
+$origFpsStr = ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate -of csv=p=0 "`"$inputFile`""
 
 $fpsParts = $origFpsStr.Split('/')
 $origFps = [math]::Round([double]$fpsParts[0] / [double]$fpsParts[1], 2)
