@@ -1,6 +1,10 @@
 $rootDir = $PSScriptRoot
 $currentLocation = $rootDir
 
+# Folder names to always hide from the menu listing (case-insensitive).
+# Add more names here if other tool-generated folders show up later.
+$excludedDirNames = @(".claude", ".git")
+
 while ($true) {
     Clear-Host
     Write-Host "=== SCRIPTS MENU ===" -ForegroundColor Cyan
@@ -12,8 +16,10 @@ while ($true) {
     Write-Host "Current Location: $($currentLocation.Replace($rootDir, '\'))" -ForegroundColor Yellow
     Write-Host "--------------------"
 
-    # Get the list of directories and ps1 files (excluding this menu file)
-    $dirs = Get-ChildItem -Path $currentLocation -Directory
+    # Get the list of directories and ps1 files (excluding this menu file
+    # and any folder name listed in $excludedDirNames)
+    $dirs = Get-ChildItem -Path $currentLocation -Directory |
+        Where-Object { $excludedDirNames -notcontains $_.Name }
     $files = Get-ChildItem -Path $currentLocation -File -Filter "*.ps1" | Where-Object { $_.Name -ne $MyInvocation.MyCommand.Name }
 
     $menuMap = @{}

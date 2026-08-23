@@ -94,34 +94,30 @@ try {
 }
 
 # -----------------------------------------------------------------------
-# 4. Build the review prompt and launch Claude Code in the target folder
+# 4. Launch Claude Code in the target folder (no auto-prompt by default -
+#    you decide what to ask once the session opens)
 # -----------------------------------------------------------------------
 Write-Step "[4/4] Starting Claude Code session..."
-
-if ([string]::IsNullOrWhiteSpace($Prompt)) {
-    $Prompt = @"
-Hay xem xet tong quan thu muc nay (khong sua/tao/xoa file, chi doc va nhan xet):
-1. Cau truc thu muc, cong nghe/framework dang dung.
-2. Nhung diem dang chu y: code smell, thieu test, TODO/FIXME con sot, dependency loi thoi hoac co lo hong bao mat da biet, config/secret bi lo trong repo.
-3. Danh gia tong quan chat luong code (muc do de bao tri, do nhat quan style).
-4. Neu thay dieu gi kho hieu hoac can doc them file cu the de danh gia chinh xac hon, hay tu doc (qua Bash/Read/Grep) truoc khi ket luan, khong doan.
-
-Tra loi ngan gon, co cau truc ro rang theo tung muc tren.
-"@
-}
 
 Write-Host ""
 Write-Host "Folder : $TargetFolder" -ForegroundColor DarkGray
 Write-Host "Mode   : $(if ($Headless) { 'Headless (one-shot, non-interactive)' } else { 'Interactive session' })" -ForegroundColor DarkGray
+if (-not [string]::IsNullOrWhiteSpace($Prompt)) {
+    Write-Host "Prompt : (custom prompt provided, will be sent as first message)" -ForegroundColor DarkGray
+}
 Write-Host ""
 
 Set-Location -LiteralPath $TargetFolder
 
-if ($Headless) {
-    # One-shot: prints the review and exits, no follow-up chat
+if ([string]::IsNullOrWhiteSpace($Prompt)) {
+    # No prompt given - just open cd'd into the folder, blank session,
+    # you type the first message yourself
+    claude
+} elseif ($Headless) {
+    # One-shot: prints the response and exits, no follow-up chat
     claude -p $Prompt
 } else {
-    # Interactive: sends the prompt as the first message, then stays open
-    # for follow-up questions
+    # Interactive: sends the given prompt as the first message, then
+    # stays open for follow-up questions
     claude $Prompt
 }
