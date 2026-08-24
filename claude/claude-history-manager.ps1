@@ -1,8 +1,12 @@
 # =============================================================================
 # claude-history-manager.ps1
 # Manage local Claude Code CLI conversation history stored under
-# ~/.claude/projects/*.jsonl (one file per session, one folder per project
-# working directory).
+# ~/.claude/projects/**/*.jsonl - this includes both top-level session
+# files AND nested subagent/workflow logs under
+# <project>/<session-id>/subagents/workflows/<workflow-id>/*.jsonl
+# (these are the real transcripts of Claude subagents spawned by MCP
+# "Workflow" tool calls - e.g. from Antigravity's claude-review-plan /
+# claude-review-code workflows).
 #
 # Usage:
 #   Just run the script (double-click or drag onto it) - everything is
@@ -17,44 +21,9 @@ function Write-Err($msg)  { Write-Host "  [ERROR] $msg" -ForegroundColor Red }
 function Write-Warn($msg) { Write-Host "  [WARNING] $msg" -ForegroundColor Yellow }
 
 # -----------------------------------------------------------------------
-# Auth helpers - this script only reads local .jsonl history files and
-# never calls the API itself, but sessions are only worth managing if
-# the CLI can still authenticate, so we check up front too.
-# -----------------------------------------------------------------------
-function Test-ClaudeAuth {
-    try {
-        $statusOutput = claude auth status 2>&1
-        $exitCode = $LASTEXITCODE
-        if ($exitCode -ne 0) { return $false }
-        if ($statusOutput -match "not logged in|not authenticated|no credentials|please run /login|expired") {
-            return $false
-        }
-        return $true
-    } catch {
-        return $false
-    }
-}
-
-function Assert-ClaudeAuth {
-    if (Test-ClaudeAuth) { return }
-
-    Write-Err "Bạn chưa đăng nhập! Đăng nhập hoặc thoát"
-    $choice = Read-Host "Nhấn 'L' để đăng nhập (claude auth login), hoặc phím bất kỳ khác để thoát"
-    if ($choice -notmatch '^[Ll]') {
-        exit 1
-    }
-
-    claude auth login
-
-    if (-not (Test-ClaudeAuth)) {
-        Write-Err "Đăng nhập không thành công. Thoát script."
-        exit 1
-    }
-    Write-Ok "Đăng nhập thành công."
-}
-
-# -----------------------------------------------------------------------
-# Helper: enumerate all session files across all project folders
+# Helper: enumerate ALL .jsonl files recursively across all project
+# folders, including nested subagent/workflow logs. Tags each entry
+# with a Type so the menu can show which kind it is.
 # -----------------------------------------------------------------------
 function Get-AllSessions {
     if (-not (Test-Path $claudeProjectsDir)) {
@@ -62,10 +31,14 @@ function Get-AllSessions {
     }
     $projectFolders = Get-ChildItem -Path $claudeProjectsDir -Directory
     $sessions = foreach ($proj in $projectFolders) {
-        Get-ChildItem -Path $proj.FullName -Filter "*.jsonl" -File | ForEach-Object {
+        Get-ChildItem -Path $proj.FullName -Filter "*.jsonl" -File -Recurse | ForEach-Object {
+            $relative = $_.FullName.Substring($proj.FullName.Length).TrimStart('\')
+            $type = if ($relative -match 'subagents\\workflows') { "Subagent" } else { "Main" }
             [PSCustomObject]@{
                 Project      = $proj.Name
+                Type         = $type
                 SessionId    = $_.BaseName
+                RelativePath = $relative
                 Path         = $_.FullName
                 SizeKB       = [math]::Round($_.Length / 1KB, 1)
                 LastModified = $_.LastWriteTime
@@ -76,43 +49,14 @@ function Get-AllSessions {
 }
 
 # -----------------------------------------------------------------------
-# Action: list - show all sessions with size and date
+# Helper: extract a readable (role, text) sequence from a .jsonl file.
+# Shared by view / export / audit so parsing logic lives in one place.
+# Best-effort - internal JSONL format is undocumented and may change.
 # -----------------------------------------------------------------------
-function Invoke-ListSessions {
-    $sessions = Get-AllSessions
-    if ($sessions.Count -eq 0) {
-        Write-Warn "No sessions found under $claudeProjectsDir"
-        return
-    }
-    Write-Host ""
-    Write-Host "Total sessions: $($sessions.Count)" -ForegroundColor Cyan
-    Write-Host ""
-    $i = 1
-    foreach ($s in $sessions) {
-        Write-Host ("[{0}] {1}" -f $i, $s.LastModified.ToString("yyyy-MM-dd HH:mm")) -NoNewline -ForegroundColor Yellow
-        Write-Host ("  {0}  ({1} KB)  Project: {2}" -f $s.SessionId.Substring(0, [Math]::Min(8, $s.SessionId.Length)), $s.SizeKB, $s.Project)
-        $i++
-    }
-    Write-Host ""
-    return $sessions
-}
-
-# -----------------------------------------------------------------------
-# Action: view - best-effort readable dump of a session's messages
-# -----------------------------------------------------------------------
-function Show-SessionContent {
+function Get-MessageTexts {
     param([string]$Path)
 
-    if (-not (Test-Path -LiteralPath $Path)) {
-        Write-Err "File not found: $Path"
-        return
-    }
-
-    Write-Host ""
-    Write-Host "=== Session content: $Path ===" -ForegroundColor Cyan
-    Write-Host "(Best-effort parsing - internal JSONL format is undocumented and may change)" -ForegroundColor DarkGray
-    Write-Host ""
-
+    $result = @()
     $lines = Get-Content -LiteralPath $Path
     foreach ($line in $lines) {
         if ([string]::IsNullOrWhiteSpace($line)) { continue }
@@ -144,11 +88,61 @@ function Show-SessionContent {
         }
 
         if ($text) {
-            $preview = if ($text.Length -gt 500) { $text.Substring(0, 500) + " ...(truncated)" } else { $text }
-            Write-Host "--- $role ---" -ForegroundColor Magenta
-            Write-Host $preview
-            Write-Host ""
+            $result += [PSCustomObject]@{ Role = $role; Text = $text }
         }
+    }
+    return $result
+}
+
+# -----------------------------------------------------------------------
+# Action: list - show all sessions with size, date, and type
+# -----------------------------------------------------------------------
+function Invoke-ListSessions {
+    $sessions = Get-AllSessions
+    if ($sessions.Count -eq 0) {
+        Write-Warn "No sessions found under $claudeProjectsDir"
+        return
+    }
+    Write-Host ""
+    Write-Host "Total entries: $($sessions.Count)  (Main sessions + Subagent/Workflow logs)" -ForegroundColor Cyan
+    Write-Host ""
+    $i = 1
+    foreach ($s in $sessions) {
+        $typeColor = if ($s.Type -eq "Subagent") { "Magenta" } else { "Yellow" }
+        Write-Host ("[{0}] " -f $i) -NoNewline
+        Write-Host ("{0,-9}" -f $s.Type) -NoNewline -ForegroundColor $typeColor
+        Write-Host (" {0}  {1} KB  {2}" -f $s.LastModified.ToString("yyyy-MM-dd HH:mm"), $s.SizeKB, $s.Project)
+        if ($s.Type -eq "Subagent") {
+            Write-Host ("        -> $($s.RelativePath)") -ForegroundColor DarkGray
+        }
+        $i++
+    }
+    Write-Host ""
+    return $sessions
+}
+
+# -----------------------------------------------------------------------
+# Action: view - best-effort readable dump of a session's messages
+# -----------------------------------------------------------------------
+function Show-SessionContent {
+    param([string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        Write-Err "File not found: $Path"
+        return
+    }
+
+    Write-Host ""
+    Write-Host "=== Session content: $Path ===" -ForegroundColor Cyan
+    Write-Host "(Best-effort parsing - internal JSONL format is undocumented and may change)" -ForegroundColor DarkGray
+    Write-Host ""
+
+    $messages = Get-MessageTexts -Path $Path
+    foreach ($m in $messages) {
+        $preview = if ($m.Text.Length -gt 500) { $m.Text.Substring(0, 500) + " ...(truncated)" } else { $m.Text }
+        Write-Host "--- $($m.Role) ---" -ForegroundColor Magenta
+        Write-Host $preview
+        Write-Host ""
     }
 }
 
@@ -168,38 +162,11 @@ function Export-SessionToMarkdown {
     [void]$sb.AppendLine("Source: $Path")
     [void]$sb.AppendLine("")
 
-    $lines = Get-Content -LiteralPath $Path
-    foreach ($line in $lines) {
-        if ([string]::IsNullOrWhiteSpace($line)) { continue }
-        try {
-            $obj = $line | ConvertFrom-Json -ErrorAction Stop
-        } catch {
-            continue
-        }
-
-        $role = $null
-        $text = $null
-        if ($obj.PSObject.Properties.Name -contains "message") {
-            $role = $obj.message.role
-            $content = $obj.message.content
-            if ($content -is [string]) {
-                $text = $content
-            } elseif ($content) {
-                $textParts = @()
-                foreach ($part in $content) {
-                    if ($part.type -eq "text" -and $part.text) { $textParts += $part.text }
-                    elseif ($part.type -eq "tool_use") { $textParts += "[tool_use: $($part.name)]" }
-                    elseif ($part.type -eq "tool_result") { $textParts += "[tool_result]" }
-                }
-                $text = $textParts -join "`n"
-            }
-        }
-
-        if ($text) {
-            [void]$sb.AppendLine("## $role")
-            [void]$sb.AppendLine($text)
-            [void]$sb.AppendLine("")
-        }
+    $messages = Get-MessageTexts -Path $Path
+    foreach ($m in $messages) {
+        [void]$sb.AppendLine("## $($m.Role)")
+        [void]$sb.AppendLine($m.Text)
+        [void]$sb.AppendLine("")
     }
 
     Set-Content -Path $OutPath -Value $sb.ToString() -Encoding UTF8
@@ -207,7 +174,7 @@ function Export-SessionToMarkdown {
 }
 
 # -----------------------------------------------------------------------
-# Action: search - grep a keyword across all session files
+# Action: search - grep a keyword across all session files (raw line match)
 # -----------------------------------------------------------------------
 function Invoke-SearchSessions {
     param([string]$Keyword)
@@ -218,7 +185,7 @@ function Invoke-SearchSessions {
 
     $sessions = Get-AllSessions
     Write-Host ""
-    Write-Host "Searching for '$Keyword' across $($sessions.Count) sessions..." -ForegroundColor Cyan
+    Write-Host "Searching for '$Keyword' across $($sessions.Count) entries..." -ForegroundColor Cyan
     Write-Host ""
 
     $found = 0
@@ -226,7 +193,7 @@ function Invoke-SearchSessions {
         $matches = Select-String -Path $s.Path -Pattern ([regex]::Escape($Keyword)) -SimpleMatch -ErrorAction SilentlyContinue
         if ($matches) {
             $found++
-            Write-Host ("Match ({0}x) - {1} - {2}" -f $matches.Count, $s.LastModified.ToString("yyyy-MM-dd"), $s.Path) -ForegroundColor Yellow
+            Write-Host ("Match ({0}x) - {1} - [{2}] {3}" -f $matches.Count, $s.LastModified.ToString("yyyy-MM-dd"), $s.Type, $s.Path) -ForegroundColor Yellow
         }
     }
 
@@ -234,7 +201,67 @@ function Invoke-SearchSessions {
         Write-Warn "No matches found."
     } else {
         Write-Host ""
-        Write-Ok "$found session(s) contain '$Keyword'"
+        Write-Ok "$found entrie(s) contain '$Keyword'"
+    }
+}
+
+# -----------------------------------------------------------------------
+# Action: audit verdicts - scan every Subagent (real Claude review) log,
+# extract the actual verdict (APPROVED / REJECTED / NEED_CLARIFICATION /
+# MATCH / MISMATCH / PARTIAL_MATCH / "Verdict" section), and print it
+# plainly. Use this to cross-check what Claude actually concluded
+# against what the orchestrating agent (e.g. Gemini/Antigravity)
+# reported back to you in chat.
+# -----------------------------------------------------------------------
+function Invoke-AuditVerdicts {
+    $verdictPattern = '(?is)(APPROVED|REJECTED|NEED_CLARIFICATION|PARTIAL_MATCH|MISMATCH|\bMATCH\b|##\s*Verdict)'
+
+    $sessions = Get-AllSessions | Where-Object { $_.Type -eq "Subagent" }
+    if ($sessions.Count -eq 0) {
+        Write-Warn "No subagent/workflow logs found - nothing to audit."
+        Write-Warn "(These only exist after an MCP Workflow tool call, e.g. from claude-review-plan/claude-review-code.)"
+        return
+    }
+
+    Write-Host ""
+    Write-Host "=== Verdict Audit - real Claude subagent conclusions ===" -ForegroundColor Cyan
+    Write-Host "Scanning $($sessions.Count) subagent log(s)..." -ForegroundColor DarkGray
+    Write-Host ""
+
+    $anyFound = $false
+    foreach ($s in $sessions) {
+        $messages = Get-MessageTexts -Path $s.Path
+        $assistantMessages = $messages | Where-Object { $_.Role -eq "assistant" }
+        foreach ($m in $assistantMessages) {
+            if ($m.Text -match $verdictPattern) {
+                $anyFound = $true
+                # Print from the last occurrence of a verdict keyword onward,
+                # since verdicts are usually stated near the end of the message.
+                $idx = $m.Text.LastIndexOf($Matches[0])
+                $startIdx = [Math]::Max(0, $idx - 50)
+                $snippet = $m.Text.Substring($startIdx)
+                if ($snippet.Length -gt 700) { $snippet = $snippet.Substring(0, 700) + " ...(truncated)" }
+
+                Write-Host ("Project : {0}" -f $s.Project) -ForegroundColor Cyan
+                Write-Host ("Workflow: {0}" -f $s.RelativePath) -ForegroundColor Cyan
+                Write-Host ("Date    : {0}" -f $s.LastModified.ToString("yyyy-MM-dd HH:mm"))
+                Write-Host "--- verdict excerpt ---" -ForegroundColor DarkGray
+                Write-Host $snippet
+                Write-Host ""
+                Write-Host "----------------------------------------------------------------------"
+                Write-Host ""
+            }
+        }
+    }
+
+    if (-not $anyFound) {
+        Write-Warn "No explicit verdict keywords found in any subagent log."
+    } else {
+        Write-Host "Cross-check each verdict above against what the orchestrating agent" -ForegroundColor Yellow
+        Write-Host "told you in chat. A mismatch (e.g. real verdict = NEED_CLARIFICATION" -ForegroundColor Yellow
+        Write-Host "but chat summary claimed 'fully approved') means the summary you were" -ForegroundColor Yellow
+        Write-Host "given misrepresented the actual review." -ForegroundColor Yellow
+        Write-Host ""
     }
 }
 
@@ -248,14 +275,14 @@ function Invoke-CleanSessions {
     $sessions = Get-AllSessions | Where-Object { $_.LastModified -lt $cutoff }
 
     if ($sessions.Count -eq 0) {
-        Write-Ok "No sessions older than $OlderThanDays days."
+        Write-Ok "No entries older than $OlderThanDays days."
         return
     }
 
     Write-Host ""
-    Write-Warn "The following $($sessions.Count) session(s) are older than $OlderThanDays days:"
+    Write-Warn "The following $($sessions.Count) entrie(s) are older than $OlderThanDays days:"
     foreach ($s in $sessions) {
-        Write-Host ("  {0}  ({1} KB)  {2}" -f $s.LastModified.ToString("yyyy-MM-dd"), $s.SizeKB, $s.Path)
+        Write-Host ("  {0}  ({1} KB)  [{2}] {3}" -f $s.LastModified.ToString("yyyy-MM-dd"), $s.SizeKB, $s.Type, $s.Path)
     }
     Write-Host ""
     $confirm = Read-Host "Type YES to permanently delete these files (anything else cancels)"
@@ -267,7 +294,7 @@ function Invoke-CleanSessions {
     foreach ($s in $sessions) {
         Remove-Item -LiteralPath $s.Path -Force
     }
-    Write-Ok "Deleted $($sessions.Count) session file(s)."
+    Write-Ok "Deleted $($sessions.Count) file(s)."
 }
 
 # -----------------------------------------------------------------------
@@ -279,6 +306,8 @@ function Show-Stats {
         Write-Warn "No sessions found."
         return
     }
+    $mainCount = ($sessions | Where-Object { $_.Type -eq "Main" }).Count
+    $subCount  = ($sessions | Where-Object { $_.Type -eq "Subagent" }).Count
     $totalKB = ($sessions | Measure-Object -Property SizeKB -Sum).Sum
     $projectCount = ($sessions | Select-Object -ExpandProperty Project -Unique).Count
     $oldest = $sessions | Sort-Object LastModified | Select-Object -First 1
@@ -286,11 +315,11 @@ function Show-Stats {
 
     Write-Host ""
     Write-Host "=== History stats ===" -ForegroundColor Cyan
-    Write-Host "  Total sessions : $($sessions.Count)"
-    Write-Host "  Projects       : $projectCount"
-    Write-Host "  Total size     : $([math]::Round($totalKB / 1024, 2)) MB"
-    Write-Host "  Oldest session : $($oldest.LastModified.ToString('yyyy-MM-dd')) ($($oldest.Project))"
-    Write-Host "  Newest session : $($newest.LastModified.ToString('yyyy-MM-dd')) ($($newest.Project))"
+    Write-Host "  Total entries    : $($sessions.Count)  (Main: $mainCount, Subagent/Workflow: $subCount)"
+    Write-Host "  Projects         : $projectCount"
+    Write-Host "  Total size       : $([math]::Round($totalKB / 1024, 2)) MB"
+    Write-Host "  Oldest entry     : $($oldest.LastModified.ToString('yyyy-MM-dd')) ($($oldest.Project))"
+    Write-Host "  Newest entry     : $($newest.LastModified.ToString('yyyy-MM-dd')) ($($newest.Project))"
     Write-Host ""
 }
 
@@ -301,12 +330,13 @@ function Show-Menu {
     while ($true) {
         Write-Host ""
         Write-Host "=== Claude Code History Manager ===" -ForegroundColor Cyan
-        Write-Host "  1. List all sessions"
-        Write-Host "  2. View a session (pick from list)"
-        Write-Host "  3. Export a session to markdown"
-        Write-Host "  4. Search sessions by keyword"
-        Write-Host "  5. Clean up old sessions"
+        Write-Host "  1. List all entries (main sessions + subagent/workflow logs)"
+        Write-Host "  2. View an entry (pick from list)"
+        Write-Host "  3. Export an entry to markdown"
+        Write-Host "  4. Search entries by keyword"
+        Write-Host "  5. Clean up old entries"
         Write-Host "  6. Show stats"
+        Write-Host "  7. Audit verdicts (find real Claude APPROVED/REJECTED/etc.)"
         Write-Host "  0. Exit"
         Write-Host ""
         $choice = Read-Host "Choose an option"
@@ -335,11 +365,12 @@ function Show-Menu {
             }
             "4" { Invoke-SearchSessions -Keyword "" }
             "5" {
-                $days = Read-Host "Delete sessions older than how many days? (default 30)"
+                $days = Read-Host "Delete entries older than how many days? (default 30)"
                 if ([string]::IsNullOrWhiteSpace($days)) { $days = 30 }
                 Invoke-CleanSessions -OlderThanDays ([int]$days)
             }
             "6" { Show-Stats }
+            "7" { Invoke-AuditVerdicts }
             "0" { return }
             default { Write-Warn "Invalid choice." }
         }
@@ -349,8 +380,6 @@ function Show-Menu {
 # -----------------------------------------------------------------------
 # Entry point - always launch the interactive menu
 # -----------------------------------------------------------------------
-Assert-ClaudeAuth
-
 if (-not (Test-Path $claudeProjectsDir)) {
     Write-Warn "No history folder found yet at: $claudeProjectsDir"
     Write-Warn "This is normal if you have not run any Claude Code session yet."
