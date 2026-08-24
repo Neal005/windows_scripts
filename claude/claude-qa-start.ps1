@@ -21,6 +21,42 @@ function Write-Ok($msg)   { Write-Host "  [OK] $msg" -ForegroundColor Green }
 function Write-Err($msg)  { Write-Host "  [ERROR] $msg" -ForegroundColor Red }
 function Write-Warn($msg) { Write-Host "  [WARNING] $msg" -ForegroundColor Yellow }
 
+# -----------------------------------------------------------------------
+# Auth helpers - detect an expired/missing Claude Code login before
+# starting the MCP server, so a bad token doesn't fail mid-review.
+# -----------------------------------------------------------------------
+function Test-ClaudeAuth {
+    try {
+        $statusOutput = claude auth status 2>&1
+        $exitCode = $LASTEXITCODE
+        if ($exitCode -ne 0) { return $false }
+        if ($statusOutput -match "not logged in|not authenticated|no credentials|please run /login|expired") {
+            return $false
+        }
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Assert-ClaudeAuth {
+    if (Test-ClaudeAuth) { return }
+
+    Write-Err "Bạn chưa đăng nhập! Đăng nhập hoặc thoát"
+    $choice = Read-Host "Nhấn 'L' để đăng nhập (claude auth login), hoặc phím bất kỳ khác để thoát"
+    if ($choice -notmatch '^[Ll]') {
+        exit 1
+    }
+
+    claude auth login
+
+    if (-not (Test-ClaudeAuth)) {
+        Write-Err "Đăng nhập không thành công. Thoát script."
+        exit 1
+    }
+    Write-Ok "Đăng nhập thành công."
+}
+
 Write-Step "=== Claude Code QA/Reviewer Launcher ==="
 Write-Host ""
 
@@ -38,6 +74,8 @@ try {
     Write-Host "    irm https://claude.ai/install.ps1 | iex"
     exit 1
 }
+
+Assert-ClaudeAuth
 
 # -----------------------------------------------------------------------
 # 2. Check that the workspace root exists

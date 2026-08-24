@@ -17,6 +17,43 @@ function Write-Err($msg)  { Write-Host "  [ERROR] $msg" -ForegroundColor Red }
 function Write-Warn($msg) { Write-Host "  [WARNING] $msg" -ForegroundColor Yellow }
 
 # -----------------------------------------------------------------------
+# Auth helpers - this script only reads local .jsonl history files and
+# never calls the API itself, but sessions are only worth managing if
+# the CLI can still authenticate, so we check up front too.
+# -----------------------------------------------------------------------
+function Test-ClaudeAuth {
+    try {
+        $statusOutput = claude auth status 2>&1
+        $exitCode = $LASTEXITCODE
+        if ($exitCode -ne 0) { return $false }
+        if ($statusOutput -match "not logged in|not authenticated|no credentials|please run /login|expired") {
+            return $false
+        }
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Assert-ClaudeAuth {
+    if (Test-ClaudeAuth) { return }
+
+    Write-Err "Bạn chưa đăng nhập! Đăng nhập hoặc thoát"
+    $choice = Read-Host "Nhấn 'L' để đăng nhập (claude auth login), hoặc phím bất kỳ khác để thoát"
+    if ($choice -notmatch '^[Ll]') {
+        exit 1
+    }
+
+    claude auth login
+
+    if (-not (Test-ClaudeAuth)) {
+        Write-Err "Đăng nhập không thành công. Thoát script."
+        exit 1
+    }
+    Write-Ok "Đăng nhập thành công."
+}
+
+# -----------------------------------------------------------------------
 # Helper: enumerate all session files across all project folders
 # -----------------------------------------------------------------------
 function Get-AllSessions {
@@ -312,6 +349,8 @@ function Show-Menu {
 # -----------------------------------------------------------------------
 # Entry point - always launch the interactive menu
 # -----------------------------------------------------------------------
+Assert-ClaudeAuth
+
 if (-not (Test-Path $claudeProjectsDir)) {
     Write-Warn "No history folder found yet at: $claudeProjectsDir"
     Write-Warn "This is normal if you have not run any Claude Code session yet."
