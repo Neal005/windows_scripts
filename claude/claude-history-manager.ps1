@@ -14,6 +14,12 @@
 # =============================================================================
 
 $ErrorActionPreference = "Stop"
+
+# Force UTF-8 for console output too - without this, even correctly-read
+# Vietnamese text can still display garbled in the terminal window,
+# because Windows PowerShell's console defaults to the system codepage.
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
 $claudeProjectsDir = Join-Path $HOME ".claude\projects"
 
 function Write-Ok($msg)   { Write-Host "  [OK] $msg" -ForegroundColor Green }
@@ -57,7 +63,11 @@ function Get-MessageTexts {
     param([string]$Path)
 
     $result = @()
-    $lines = Get-Content -LiteralPath $Path
+    # UTF8 encoding is REQUIRED here - without it, PowerShell (especially
+    # Windows PowerShell 5.1) reads the file using the system's default
+    # codepage (e.g. Windows-1252), corrupting every multi-byte UTF-8
+    # character (Vietnamese text becomes garbled: "Ã¡Â»Å¡C" instead of "ƯỚC").
+    $lines = Get-Content -LiteralPath $Path -Encoding UTF8
     foreach ($line in $lines) {
         if ([string]::IsNullOrWhiteSpace($line)) { continue }
         try {
@@ -324,6 +334,57 @@ function Show-Stats {
 }
 
 # -----------------------------------------------------------------------
+# Action: token usage - sum up real token accounting fields for a session
+# -----------------------------------------------------------------------
+function Show-TokenUsage {
+    param([string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        Write-Err "File not found: $Path"
+        return
+    }
+
+    $totalInput = 0
+    $totalOutput = 0
+    $totalCacheCreate = 0
+    $totalCacheRead = 0
+    $messageCount = 0
+
+    $lines = Get-Content -LiteralPath $Path -Encoding UTF8
+    foreach ($line in $lines) {
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+        try {
+            $obj = $line | ConvertFrom-Json -ErrorAction Stop
+        } catch {
+            continue
+        }
+        $usage = $obj.message.usage
+        if ($usage) {
+            $messageCount++
+            if ($usage.input_tokens) { $totalInput += $usage.input_tokens }
+            if ($usage.output_tokens) { $totalOutput += $usage.output_tokens }
+            if ($usage.cache_creation_input_tokens) { $totalCacheCreate += $usage.cache_creation_input_tokens }
+            if ($usage.cache_read_input_tokens) { $totalCacheRead += $usage.cache_read_input_tokens }
+        }
+    }
+
+    Write-Host ""
+    Write-Host "=== Token usage: $Path ===" -ForegroundColor Cyan
+    Write-Host "  Assistant messages with usage data : $messageCount"
+    Write-Host "  Input tokens (fresh)               : $totalInput"
+    Write-Host "  Output tokens                      : $totalOutput"
+    Write-Host "  Cache creation tokens              : $totalCacheCreate"
+    Write-Host "  Cache read tokens (reused context)  : $totalCacheRead"
+    Write-Host "  ------------------------------------"
+    Write-Host "  TOTAL (input + output + cache)     : $($totalInput + $totalOutput + $totalCacheCreate + $totalCacheRead)" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  Note: cache_read tokens are heavily discounted by Anthropic's" -ForegroundColor DarkGray
+    Write-Host "  pricing (prompt caching) - the raw sum above is a token COUNT," -ForegroundColor DarkGray
+    Write-Host "  not a direct cost estimate." -ForegroundColor DarkGray
+    Write-Host ""
+}
+
+# -----------------------------------------------------------------------
 # Interactive menu
 # -----------------------------------------------------------------------
 function Show-Menu {
@@ -337,6 +398,7 @@ function Show-Menu {
         Write-Host "  5. Clean up old entries"
         Write-Host "  6. Show stats"
         Write-Host "  7. Audit verdicts (find real Claude APPROVED/REJECTED/etc.)"
+        Write-Host "  8. Show token usage for an entry"
         Write-Host "  0. Exit"
         Write-Host ""
         $choice = Read-Host "Choose an option"
@@ -371,6 +433,15 @@ function Show-Menu {
             }
             "6" { Show-Stats }
             "7" { Invoke-AuditVerdicts }
+            "8" {
+                $sessions = Invoke-ListSessions
+                if ($sessions) {
+                    $idx = Read-Host "Enter number to show token usage"
+                    if ($idx -match '^\d+$' -and [int]$idx -ge 1 -and [int]$idx -le $sessions.Count) {
+                        Show-TokenUsage -Path $sessions[[int]$idx - 1].Path
+                    }
+                }
+            }
             "0" { return }
             default { Write-Warn "Invalid choice." }
         }
