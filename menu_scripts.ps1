@@ -1,3 +1,5 @@
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+
 $rootDir = $PSScriptRoot
 $currentLocation = $rootDir
 
@@ -20,7 +22,7 @@ while ($true) {
     # and any folder name listed in $excludedDirNames)
     $dirs = Get-ChildItem -Path $currentLocation -Directory |
         Where-Object { $excludedDirNames -notcontains $_.Name }
-    $files = Get-ChildItem -Path $currentLocation -File -Filter "*.ps1" | Where-Object { $_.Name -ne $MyInvocation.MyCommand.Name }
+    $files = Get-ChildItem -Path $currentLocation -File -Filter "*.ps1" | Where-Object { $_.FullName -ne $PSCommandPath }
 
     $menuMap = @{}
     $index = 1
@@ -66,7 +68,7 @@ while ($true) {
             # Run file
             Clear-Host
             Write-Host ">> Running: $($selected.Name)...`n" -ForegroundColor Magenta
-            & $selected.FullName
+            powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$($selected.FullName)"
             Read-Host "`n[Done] Press Enter to return to the menu..."
         }
     }

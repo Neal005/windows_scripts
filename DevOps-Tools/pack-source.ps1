@@ -74,7 +74,13 @@ if (Test-Path (Join-Path $ProjectDir ".git")) {
             $lastCommit = $null
         }
 
-        if ($lastCommit -and (git cat-file -e "$lastCommit^{commit}" 2>$null; $LASTEXITCODE -eq 0)) {
+        $lastCommitValid = $false
+        if ($lastCommit) {
+            git cat-file -e "$lastCommit^{commit}" 2>$null
+            $lastCommitValid = ($LASTEXITCODE -eq 0)
+        }
+
+        if ($lastCommitValid) {
             # So sanh tu lan dong goi truoc den commit hien tai (bat het moi commit da trôi qua,
             # khong chi 1 commit gan nhat). Bao gom ca Deleted va Renamed (old path can duoc xoa tren server).
             $gitOutput = git diff --diff-filter=DR --name-status "$lastCommit" "$currentCommit" 2>$null
