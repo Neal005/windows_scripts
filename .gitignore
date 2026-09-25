@@ -1,2 +1,7 @@
 /Agent/
 *.lnk
+
+# SmartGlasses toggle runtime files
+windows_ultilities/smartglasses_log.txt
+windows_ultilities/smartglasses_screen.json
+windows_ultilities/smartglasses_overlay.lock
