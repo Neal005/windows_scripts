@@ -14,6 +14,10 @@ TABLE_ROLES = ("table",)
 ROW_ROLES = ("pk", "fk", "plain", "note", "separator")
 EDGE_ROLES = ("line", "dependency", "return")
 LINE_STYLES = ("solid", "dashed", "dotted")
+# `variant` values per cell type (themes map them to grays / title prefixes).
+VERTEX_VARIANTS = ("plain",)
+TABLE_VARIANTS = ("plain", "new", "extend", "reuse")
+EDGE_VARIANTS = ("plain",)
 
 # Names accepted for `start` / `end` of an edge (mapping to markers lives in emit/styles.py).
 ARROW_SYMBOLS = (

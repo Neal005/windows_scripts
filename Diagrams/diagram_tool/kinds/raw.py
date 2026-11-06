@@ -111,12 +111,14 @@ class _Validator:
             fail(path, "must not be empty")
         return value
 
-    def variant(self, d, path):
+    def variant(self, d, path, options):
         if "variant" not in d:
             return None
         value = d["variant"]
         if not isinstance(value, str) or not S.VARIANT_RE.match(value):
             fail(join(path, "variant"), "must match [a-z][a-z0-9_-]{0,31}")
+        if value not in options:
+            fail(join(path, "variant"), "must be one of: %s" % ", ".join(options))
         return value
 
     def tags(self, d, path):
@@ -254,11 +256,11 @@ class _Validator:
 
     # ---- cells (field level) ----------------------------------------------
 
-    def common(self, d, path, default_role, roles):
+    def common(self, d, path, default_role, roles, variants):
         out = {
             "id": self.ident(d["id"], join(path, "id")),
             "role": self.choice(d.get("role", default_role), roles, join(path, "role")),
-            "variant": self.variant(d, path),
+            "variant": self.variant(d, path, variants),
             "tags": self.tags(d, path),
             "attrs": self.attrs(d["attrs"], join(path, "attrs")) if "attrs" in d else {},
         }
@@ -271,7 +273,7 @@ class _Validator:
 
     def vertex(self, c, path):
         d = self.obj(c, path, _VERTEX_KEYS, ("id", "type", "x", "y", "w", "h"))
-        out = self.common(d, path, "box", S.VERTEX_ROLES)
+        out = self.common(d, path, "box", S.VERTEX_ROLES, S.VERTEX_VARIANTS)
         out.update({
             "type": "vertex",
             "parent": self.parent_field(d, path),
@@ -288,7 +290,7 @@ class _Validator:
         if "h" in c:
             fail(join(path, "h"), "table height is computed from its rows; remove 'h'")
         d = self.obj(c, path, _TABLE_KEYS, ("id", "type", "x", "y", "w", "title", "rows"))
-        out = self.common(d, path, "table", S.TABLE_ROLES)
+        out = self.common(d, path, "table", S.TABLE_ROLES, S.TABLE_VARIANTS)
         rows = self.rows(d["rows"], join(path, "rows"))
         out.update({
             "type": "table",
@@ -384,7 +386,7 @@ class _Validator:
 
     def edge_fields(self, c, path):
         d = self.obj(c, path, _EDGE_KEYS, ("id", "type", "source", "target"))
-        out = self.common(d, path, "line", S.EDGE_ROLES)
+        out = self.common(d, path, "line", S.EDGE_ROLES, S.EDGE_VARIANTS)
         points = []
         if "points" in d:
             pp = join(path, "points")
@@ -571,3 +573,14 @@ def _show(value):
     if isinstance(value, float) and value == int(value):
         return str(int(value))
     return str(value)
+
+
+def to_drawio(data, theme=None):
+    """Validate `data` (parsed JSON of kind raw) and render it. Returns (xml_text, warnings).
+
+    `theme` (mono|accent) overrides the document's `theme`.
+    """
+    from ..emit.mxgraph import emit_document
+
+    result = validate_raw(data)
+    return emit_document(result.doc, theme), result.warnings
