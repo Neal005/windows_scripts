@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 
 from diagram_tool.core import jsonio
 from diagram_tool.core import schema as S
+from tests.test_erd_adapter import REAL_META
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # .../Diagrams
 EXAMPLES = os.path.join(ROOT, "examples", "raw")
@@ -168,6 +169,163 @@ class CliTest(unittest.TestCase):
                 code, out, err = run(os.path.join(EXAMPLES, name), "--stdout")
                 self.assertEqual(code, 0, (name, err))
                 ET.fromstring(out)
+
+
+ERD_DEMO = os.path.join(ROOT, "examples", "erd", "erd_demo.meta.json")
+ERD_GOLDEN = os.path.join(ROOT, "examples", "out", "erd_demo.gen.drawio")
+
+
+class ErdCliTest(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = self._tmp.name
+        self.addCleanup(self._tmp.cleanup)
+        with open(ERD_DEMO, "rb") as fh:
+            self.demo_bytes = fh.read()
+
+    def copy_demo(self, name="x.meta.json"):
+        path = os.path.join(self.tmp, name)
+        with open(path, "wb") as fh:
+            fh.write(self.demo_bytes)
+        return path
+
+    def test_detected_by_structure(self):
+        code, out, err = run(ERD_DEMO, "--stdout")
+        self.assertEqual(code, 0, err)
+        root = ET.fromstring(out)
+        self.assertEqual(len(root.findall("diagram")), 1)
+        self.assertIn(b"[NEW] khu", out)
+        self.assertIn(b"[EXTEND] bao_cao", out)
+        self.assertIn(b"[REUSE] co_quan", out)
+
+    def test_default_name_drops_meta_and_adds_gen(self):
+        src = self.copy_demo("erd_x.meta.json")
+        code, out, err = run(src)
+        self.assertEqual((code, out), (0, b""))
+        self.assertEqual(sorted(os.listdir(self.tmp)), ["erd_x.gen.drawio", "erd_x.meta.json"])
+        self.assertTrue(err.startswith(b"wrote: "), err)
+        plain = self.copy_demo("plain.json")
+        run(plain)
+        self.assertIn("plain.gen.drawio", os.listdir(self.tmp))      # erd kind always gets .gen.drawio
+
+    def test_kind_option(self):
+        self.assertEqual(run(ERD_DEMO, "--stdout", "--kind", "erd")[0], 0)
+        code, out, err = run(ERD_DEMO, "--stdout", "--kind", "raw")
+        self.assertEqual((code, out), (1, b""))
+        self.assertIn(b"kind", err)
+        code, out, err = run(SMOKE_JSON, "--stdout", "--kind", "erd")
+        self.assertEqual((code, out), (1, b""))
+        self.assertEqual(run(SMOKE_JSON, "--stdout", "--kind", "raw")[0], 0)
+        self.assertEqual(run(ERD_DEMO, "--kind", "bogus")[0], 2)
+
+    def test_output_directory(self):
+        src = self.copy_demo()
+        outdir = os.path.join(self.tmp, "out")
+        os.mkdir(outdir)
+        code, _, err = run(src, "-o", outdir)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(os.listdir(outdir), ["x.gen.drawio"])
+        # a path that does not exist is a FILE name (parent must exist)
+        target = os.path.join(self.tmp, "named.drawio")
+        self.assertEqual(run(src, "-o", target)[0], 0)
+        self.assertTrue(os.path.isfile(target))
+        self.assertEqual(run(src, "-o", os.path.join(self.tmp, "missing", "f.drawio"))[0], 2)
+
+    def test_trailing_separator_means_directory_that_must_exist(self):
+        src = self.copy_demo()
+        code, out, err = run(src, "-o", os.path.join(self.tmp, "newdir") + os.sep)
+        self.assertEqual(code, 2)
+        self.assertIn(b"does not exist", err)
+        self.assertFalse(os.path.exists(os.path.join(self.tmp, "newdir")))
+
+    def test_meta_suffix_is_dropped_case_insensitively(self):
+        src = self.copy_demo("Big.META.json")
+        run(src)
+        self.assertIn("Big.gen.drawio", os.listdir(self.tmp))
+
+    def test_wrote_line_names_the_output_path(self):
+        src = self.copy_demo()
+        code, _, err = run(src)
+        self.assertEqual(err.decode("ascii").strip(), "wrote: " + os.path.join(self.tmp, "x.gen.drawio"))
+
+    def test_no_clobber_with_output_directory_and_raw_kind(self):
+        outdir = os.path.join(self.tmp, "o")
+        os.mkdir(outdir)
+        self.assertEqual(run(ERD_DEMO, "-o", outdir)[0], 0)
+        first = os.path.join(outdir, "erd_demo.gen.drawio")
+        write(first, "keep")
+        code, _, err = run(ERD_DEMO, "-o", outdir, "--no-clobber")
+        self.assertEqual(code, 0)
+        self.assertTrue(err.startswith(b"skipped: "))
+        with open(first, "rb") as fh:
+            self.assertEqual(fh.read(), b"keep")
+        self.assertEqual(run(SMOKE_JSON, "-o", outdir)[0], 0)           # raw: <name>.drawio inside the directory
+        self.assertTrue(os.path.isfile(os.path.join(outdir, "smoke.drawio")))
+
+    def test_no_clobber(self):
+        src = self.copy_demo()
+        out = os.path.join(self.tmp, "x.gen.drawio")
+        write(out, "precious")
+        code, _, err = run(src, "--no-clobber")
+        self.assertEqual(code, 0)
+        self.assertTrue(err.startswith(b"skipped: "), err)
+        with open(out, "rb") as fh:
+            self.assertEqual(fh.read(), b"precious")
+        code, _, err = run(src)                      # without the flag the file is replaced
+        self.assertTrue(err.startswith(b"wrote: "), err)
+        with open(out, "rb") as fh:
+            self.assertTrue(fh.read().startswith(b"<mxfile"))
+
+    def test_errors_are_clean_and_ascii(self):
+        bad = json.loads(self.demo_bytes.decode("utf-8"))
+        bad["relationships"][0]["parent"] = "ghost"
+        path = os.path.join(self.tmp, "bad.meta.json")
+        write(path, json.dumps(bad))
+        code, out, err = run(path, "--stdout")
+        self.assertEqual((code, out), (1, b""))
+        self.assertTrue(err.startswith(b"error: relationships[0].parent"), err)
+        err.decode("ascii")
+        self.assertNotIn(b"Traceback", err)
+
+    def test_warnings_go_to_stderr_in_ascii(self):
+        data = json.loads(self.demo_bytes.decode("utf-8"))
+        data["tables"][2]["foreign_keys"].append({"columns": ["m\u1ed3_c\u00f4i_id"], "ref_table": "co_quan"})
+        path = os.path.join(self.tmp, "w.meta.json")
+        write(path, json.dumps(data))
+        code, out, err = run(path, "--stdout")
+        self.assertEqual(code, 0)
+        self.assertIn(b"warning: ", err)
+        err.decode("ascii")
+
+    def test_golden_file_matches_a_fresh_run(self):
+        code, fresh, _ = run(ERD_DEMO, "--stdout")
+        self.assertEqual(code, 0)
+        with open(ERD_GOLDEN, "rb") as fh:
+            self.assertEqual(fh.read(), fresh)
+
+    def test_deterministic_across_hash_seeds(self):
+        outputs = {run(ERD_DEMO, "--stdout", env_extra={"PYTHONHASHSEED": s})[1] for s in ("0", "1", "424242", "random")}
+        self.assertEqual(len(outputs), 1)
+
+    def test_demo_covers_the_features(self):
+        data = jsonio.load_file(ERD_DEMO)
+        kinds = {t["kind"] for t in data["tables"]}
+        self.assertEqual(kinds, {"NEW", "EXTEND", "REUSE"})
+        rels = data["relationships"]
+        self.assertTrue(any(r["parent"] == r["child"] for r in rels))                       # self-loop
+        pairs = {(r["parent"], r["child"]) for r in rels}
+        self.assertTrue(any((b, a) in pairs for a, b in pairs if a != b))                    # cycle
+        counts = {}
+        for r in rels:
+            counts[(r["parent"], r["child"])] = counts.get((r["parent"], r["child"]), 0) + 1
+        self.assertTrue(any(c > 1 for c in counts.values()))                                 # parallel FKs
+
+    @unittest.skipUnless(os.path.exists(REAL_META), "real meta not available")
+    def test_real_meta_through_the_cli(self):
+        code, out, err = run(REAL_META, "--stdout", "--kind", "erd")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(err, b"")
+        ET.fromstring(out)
 
 
 class SmokeTest(unittest.TestCase):

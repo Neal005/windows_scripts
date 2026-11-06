@@ -1,0 +1,189 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="erd" name="ERD">
+    <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="880" pageHeight="880" math="0" shadow="0" background="#FFFFFF" adaptiveColors="none">
+      <root>
+        <object generator="diagram_tool 0.1.0" title="ERD demo (du lieu gia, khong phai du an that) - 2026-11-06-demo" id="0">
+          <mxCell/>
+        </object>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="erd:erd_title" value="ERD demo (du lieu gia, khong phai du an that) - 2026-11-06-demo" style="text;rounded=0;html=0;fillColor=none;strokeColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=16;fontStyle=1;align=left;verticalAlign=top;spacingLeft=4;" parent="1" vertex="1">
+          <mxGeometry x="40" y="10" width="800" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:erd_legend" value="Chu thich: [NEW] trang | [EXTEND] xam nhat | [REUSE] xam dam" style="rounded=0;html=0;fillColor=#E0E0E0;strokeColor=#404040;strokeWidth=1;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=2;align=left;verticalAlign=middle;spacingLeft=4;" parent="1" vertex="1">
+          <mxGeometry x="40" y="48" width="800" height="30" as="geometry"/>
+        </mxCell>
+        <object label="[REUSE] co_quan" entity="co_quan" kind="REUSE" id="erd:co_quan">
+          <mxCell style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;rounded=0;html=0;fillColor=#BDBDBD;swimlaneFillColor=#BDBDBD;strokeColor=#404040;strokeWidth=1;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" parent="1" vertex="1">
+            <mxGeometry x="175" y="100" width="200" height="56" as="geometry"/>
+          </mxCell>
+        </object>
+        <mxCell id="erd:co_quan:id" value="id uuid PK" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=1;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:co_quan" vertex="1">
+          <mxGeometry x="0" y="30" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <object label="[REUSE] nguoi_dung" entity="nguoi_dung" kind="REUSE" id="erd:nguoi_dung">
+          <mxCell style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;rounded=0;html=0;fillColor=#BDBDBD;swimlaneFillColor=#BDBDBD;strokeColor=#404040;strokeWidth=1;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" parent="1" vertex="1">
+            <mxGeometry x="426" y="218" width="200" height="82" as="geometry"/>
+          </mxCell>
+        </object>
+        <mxCell id="erd:nguoi_dung:id" value="id uuid PK" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=1;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:nguoi_dung" vertex="1">
+          <mxGeometry x="0" y="30" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:nguoi_dung:nguoi_quan_ly_id" value="nguoi_quan_ly_id uuid" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=2;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:nguoi_dung" vertex="1">
+          <mxGeometry x="0" y="56" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <object label="[NEW] khu" entity="khu" kind="NEW" id="erd:khu">
+          <mxCell style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;rounded=0;html=0;fillColor=#FFFFFF;swimlaneFillColor=#FFFFFF;strokeColor=#404040;strokeWidth=1;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" parent="1" vertex="1">
+            <mxGeometry x="40" y="218" width="240" height="186" as="geometry"/>
+          </mxCell>
+        </object>
+        <mxCell id="erd:khu:id" value="id uuid PK" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=1;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:khu" vertex="1">
+          <mxGeometry x="0" y="30" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:khu:ten" value="ten varchar(250)" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=0;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:khu" vertex="1">
+          <mxGeometry x="0" y="56" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:khu:co_quan_id" value="co_quan_id uuid" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=2;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:khu" vertex="1">
+          <mxGeometry x="0" y="82" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:khu:co_so_ha_tang_id" value="co_so_ha_tang_id uuid NULL" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=2;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:khu" vertex="1">
+          <mxGeometry x="0" y="108" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:khu:uk_ux_khu_ten" value="UK UX_khu_ten(ten)" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=4;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:khu" vertex="1">
+          <mxGeometry x="0" y="134" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:khu:ck_ck_khu_ten" value="CK CK_khu_ten: length(ten) &gt; 0" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=4;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:khu" vertex="1">
+          <mxGeometry x="0" y="160" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <object label="[NEW] co_so" entity="co_so" kind="NEW" id="erd:co_so">
+          <mxCell style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;rounded=0;html=0;fillColor=#FFFFFF;swimlaneFillColor=#FFFFFF;strokeColor=#404040;strokeWidth=1;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" parent="1" vertex="1">
+            <mxGeometry x="60" y="466" width="200" height="134" as="geometry"/>
+          </mxCell>
+        </object>
+        <mxCell id="erd:co_so:id" value="id uuid PK" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=1;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:co_so" vertex="1">
+          <mxGeometry x="0" y="30" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:co_so:ten" value="ten varchar(250)" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=0;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:co_so" vertex="1">
+          <mxGeometry x="0" y="56" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:co_so:khu_id" value="khu_id uuid NULL" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=2;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:co_so" vertex="1">
+          <mxGeometry x="0" y="82" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:co_so:ix_ix_co_so_khu" value="IX IX_co_so_khu(khu_id)" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=4;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:co_so" vertex="1">
+          <mxGeometry x="0" y="108" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <object label="[EXTEND] bao_cao" entity="bao_cao" kind="EXTEND" id="erd:bao_cao">
+          <mxCell style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;rounded=0;html=0;fillColor=#E0E0E0;swimlaneFillColor=#E0E0E0;strokeColor=#404040;strokeWidth=1;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" parent="1" vertex="1">
+            <mxGeometry x="320" y="466" width="200" height="134" as="geometry"/>
+          </mxCell>
+        </object>
+        <mxCell id="erd:bao_cao:id" value="id uuid PK" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=1;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:bao_cao" vertex="1">
+          <mxGeometry x="0" y="30" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:bao_cao:co_quan_id" value="co_quan_id uuid NULL (ADD)" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=2;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:bao_cao" vertex="1">
+          <mxGeometry x="0" y="56" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:bao_cao:tao_boi" value="tao_boi uuid (ADD)" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=2;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:bao_cao" vertex="1">
+          <mxGeometry x="0" y="82" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:bao_cao:other_columns" value="... cac cot khac khong doi" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=4;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:bao_cao" vertex="1">
+          <mxGeometry x="0" y="108" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <object label="[NEW] bao_cao_dong" entity="bao_cao_dong" kind="NEW" id="erd:bao_cao_dong">
+          <mxCell style="swimlane;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;rounded=0;html=0;fillColor=#FFFFFF;swimlaneFillColor=#FFFFFF;strokeColor=#404040;strokeWidth=1;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;" parent="1" vertex="1">
+            <mxGeometry x="204" y="676" width="200" height="160" as="geometry"/>
+          </mxCell>
+        </object>
+        <mxCell id="erd:bao_cao_dong:id" value="id uuid PK" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=1;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:bao_cao_dong" vertex="1">
+          <mxGeometry x="0" y="30" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:bao_cao_dong:bao_cao_id" value="bao_cao_id uuid" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=2;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:bao_cao_dong" vertex="1">
+          <mxGeometry x="0" y="56" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:bao_cao_dong:bao_cao_nguon_id" value="bao_cao_nguon_id uuid NULL" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=2;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:bao_cao_dong" vertex="1">
+          <mxGeometry x="0" y="82" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:bao_cao_dong:co_so_id" value="co_so_id uuid NULL" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=2;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:bao_cao_dong" vertex="1">
+          <mxGeometry x="0" y="108" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:bao_cao_dong:so_lieu" value="so_lieu numeric(18,3) NULL" style="text;html=0;strokeColor=none;fillColor=none;labelBackgroundColor=none;fontColor=#000000;fontFamily=Arial;fontSize=12;fontStyle=0;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="erd:bao_cao_dong" vertex="1">
+          <mxGeometry x="0" y="134" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="erd:rel.khu.co_quan_id" value="quan ly" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;exitX=0.025;exitY=1;exitDx=0;exitDy=0;entryX=0.975;entryY=0;entryDx=0;entryDy=0;startArrow=ERmandOne;startFill=0;endArrow=ERzeroToMany;endFill=0;strokeColor=#000000;strokeWidth=1;dashed=0;labelBackgroundColor=#FFFFFF;fontColor=#000000;fontFamily=Arial;fontSize=12;" parent="1" source="erd:co_quan" target="erd:khu" edge="1">
+          <mxGeometry x="0" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="180" y="180"/>
+              <mxPoint x="274" y="180"/>
+            </Array>
+            <mxPoint x="0" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="erd:rel.co_so.khu_id" value="co so trong khu" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;startArrow=ERzeroToOne;startFill=0;endArrow=ERzeroToMany;endFill=0;strokeColor=#000000;strokeWidth=1;dashed=0;labelBackgroundColor=#FFFFFF;fontColor=#000000;fontFamily=Arial;fontSize=12;" parent="1" source="erd:khu" target="erd:co_so" edge="1">
+          <mxGeometry x="0" relative="1" as="geometry">
+            <mxPoint x="0" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="erd:rel.khu.co_so_ha_tang_id" value="co so ha tang" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;exitX=0.675;exitY=0;exitDx=0;exitDy=0;entryX=0.6;entryY=1;entryDx=0;entryDy=0;startArrow=ERzeroToOne;startFill=0;endArrow=ERzeroToOne;endFill=0;strokeColor=#000000;strokeWidth=1;dashed=0;labelBackgroundColor=#FFFFFF;fontColor=#000000;fontFamily=Arial;fontSize=12;" parent="1" source="erd:co_so" target="erd:khu" edge="1">
+          <mxGeometry x="0" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="195" y="428"/>
+              <mxPoint x="184" y="428"/>
+            </Array>
+            <mxPoint x="0" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="erd:rel.bao_cao.co_quan_id" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;exitX=0.975;exitY=1;exitDx=0;exitDy=0;entryX=0.35;entryY=0;entryDx=0;entryDy=0;startArrow=ERzeroToOne;startFill=0;endArrow=ERzeroToMany;endFill=0;strokeColor=#000000;strokeWidth=1;dashed=0;labelBackgroundColor=#FFFFFF;fontColor=#000000;fontFamily=Arial;fontSize=12;" parent="1" source="erd:co_quan" target="erd:bao_cao" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="370" y="180"/>
+              <mxPoint x="390" y="180"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="erd:rel.bao_cao.tao_boi" value="nguoi tao" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;exitX=0.025;exitY=1;exitDx=0;exitDy=0;entryX=0.975;entryY=0;entryDx=0;entryDy=0;startArrow=ERmandOne;startFill=0;endArrow=ERzeroToMany;endFill=0;strokeColor=#000000;strokeWidth=1;dashed=0;labelBackgroundColor=#FFFFFF;fontColor=#000000;fontFamily=Arial;fontSize=12;" parent="1" source="erd:nguoi_dung" target="erd:bao_cao" edge="1">
+          <mxGeometry x="0" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="431" y="428"/>
+              <mxPoint x="515" y="428"/>
+            </Array>
+            <mxPoint x="0" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="erd:rel.bao_cao_dong.bao_cao_id" value="dong bao cao" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;exitX=0.025;exitY=1;exitDx=0;exitDy=0;entryX=0.875;entryY=0;entryDx=0;entryDy=0;startArrow=ERmandOne;startFill=0;endArrow=ERzeroToMany;endFill=0;strokeColor=#000000;strokeWidth=1;dashed=0;labelBackgroundColor=#FFFFFF;fontColor=#000000;fontFamily=Arial;fontSize=12;" parent="1" source="erd:bao_cao" target="erd:bao_cao_dong" edge="1">
+          <mxGeometry x="0" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="325" y="638"/>
+              <mxPoint x="379" y="638"/>
+            </Array>
+            <mxPoint x="0" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="erd:rel.bao_cao_dong.bao_cao_nguon_id" value="bao cao nguon" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;exitX=0.125;exitY=1;exitDx=0;exitDy=0;entryX=0.975;entryY=0;entryDx=0;entryDy=0;startArrow=ERzeroToOne;startFill=0;endArrow=ERzeroToMany;endFill=0;strokeColor=#000000;strokeWidth=1;dashed=0;labelBackgroundColor=#FFFFFF;fontColor=#000000;fontFamily=Arial;fontSize=12;" parent="1" source="erd:bao_cao" target="erd:bao_cao_dong" edge="1">
+          <mxGeometry x="0" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="345" y="624"/>
+              <mxPoint x="399" y="624"/>
+            </Array>
+            <mxPoint x="0" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="erd:rel.bao_cao_dong.co_so_id" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;exitX=0.975;exitY=1;exitDx=0;exitDy=0;entryX=0.025;entryY=0;entryDx=0;entryDy=0;startArrow=ERzeroToOne;startFill=0;endArrow=ERzeroToMany;endFill=0;strokeColor=#000000;strokeWidth=1;dashed=0;labelBackgroundColor=#FFFFFF;fontColor=#000000;fontFamily=Arial;fontSize=12;" parent="1" source="erd:co_so" target="erd:bao_cao_dong" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="255" y="624"/>
+              <mxPoint x="209" y="624"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="erd:rel.nguoi_dung.nguoi_quan_ly_id" value="quan ly" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;startArrow=ERzeroToOne;startFill=0;endArrow=ERzeroToMany;endFill=0;strokeColor=#000000;strokeWidth=1;dashed=0;labelBackgroundColor=#FFFFFF;fontColor=#000000;fontFamily=Arial;fontSize=12;orthogonalLoop=1;" parent="1" source="erd:nguoi_dung" target="erd:nguoi_dung" edge="1">
+          <mxGeometry x="0" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="656" y="238.5"/>
+              <mxPoint x="656" y="259"/>
+            </Array>
+            <mxPoint x="0" y="-8" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

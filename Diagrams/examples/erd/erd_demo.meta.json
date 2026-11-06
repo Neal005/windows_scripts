@@ -1,0 +1,49 @@
+{
+  "schema_version": "1",
+  "version": "2026-11-06-demo",
+  "mau": {"ten_mau": "ERD demo (du lieu gia, khong phai du an that)"},
+  "tables": [
+    {"name": "co_quan", "kind": "REUSE"},
+    {"name": "nguoi_dung", "kind": "REUSE"},
+    {"name": "khu", "kind": "NEW",
+     "columns": [
+       {"name": "ten", "pg_type": "varchar(250)", "nullable": false},
+       {"name": "co_quan_id", "pg_type": "uuid", "nullable": false},
+       {"name": "co_so_ha_tang_id", "pg_type": "uuid", "nullable": true}
+     ],
+     "primary_key": ["id"],
+     "foreign_keys": [{"columns": ["co_quan_id"], "ref_table": "co_quan"}, {"columns": ["co_so_ha_tang_id"], "ref_table": "co_so"}],
+     "uniques": [{"name": "UX_khu_ten", "columns": ["ten"], "where": "is_deleted = false"}],
+     "checks": [{"name": "CK_khu_ten", "expr": "length(ten) > 0", "enforced_by": "DB"}]},
+    {"name": "co_so", "kind": "NEW",
+     "columns": [
+       {"name": "ten", "pg_type": "varchar(250)", "nullable": false},
+       {"name": "khu_id", "pg_type": "uuid", "nullable": true}
+     ],
+     "indexes": [{"name": "IX_co_so_khu", "columns": ["khu_id"]}]},
+    {"name": "bao_cao", "kind": "EXTEND", "other_columns": "unchanged",
+     "columns": [
+       {"name": "co_quan_id", "pg_type": "uuid", "nullable": true, "change": "ADD"},
+       {"name": "tao_boi", "pg_type": "uuid", "nullable": false, "change": "ADD"},
+       {"name": "ghi_chu", "pg_type": "text", "nullable": true}
+     ]},
+    {"name": "bao_cao_dong", "kind": "NEW",
+     "columns": [
+       {"name": "bao_cao_id", "pg_type": "uuid", "nullable": false},
+       {"name": "bao_cao_nguon_id", "pg_type": "uuid", "nullable": true},
+       {"name": "co_so_id", "pg_type": "uuid", "nullable": true},
+       {"name": "so_lieu", "pg_type": "numeric(18,3)", "nullable": true}
+     ]}
+  ],
+  "relationships": [
+    {"parent": "co_quan", "child": "khu", "fk_column": "co_quan_id", "parent_card": "1", "child_card": "0..N", "label": "quan ly"},
+    {"parent": "khu", "child": "co_so", "fk_column": "khu_id", "parent_card": "0..1", "child_card": "0..N", "label": "co so trong khu"},
+    {"parent": "co_so", "child": "khu", "fk_column": "co_so_ha_tang_id", "parent_card": "0..1", "child_card": "0..1", "label": "co so ha tang"},
+    {"parent": "co_quan", "child": "bao_cao", "fk_column": "co_quan_id", "parent_card": "0..1", "child_card": "0..N"},
+    {"parent": "nguoi_dung", "child": "bao_cao", "fk_column": "tao_boi", "parent_card": "1", "child_card": "0..N", "label": "nguoi tao"},
+    {"parent": "bao_cao", "child": "bao_cao_dong", "fk_column": "bao_cao_id", "parent_card": "1", "child_card": "0..N", "label": "dong bao cao"},
+    {"parent": "bao_cao", "child": "bao_cao_dong", "fk_column": "bao_cao_nguon_id", "parent_card": "0..1", "child_card": "0..N", "label": "bao cao nguon"},
+    {"parent": "co_so", "child": "bao_cao_dong", "fk_column": "co_so_id", "parent_card": "0..1", "child_card": "0..N"},
+    {"parent": "nguoi_dung", "child": "nguoi_dung", "fk_column": "nguoi_quan_ly_id", "parent_card": "0..1", "child_card": "0..N", "label": "quan ly"}
+  ]
+}

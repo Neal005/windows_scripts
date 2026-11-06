@@ -3,17 +3,19 @@
 Hand-placed blocks, tables and orthogonal edges. Every coordinate is written by you; the tool
 validates it, picks styles from a theme and writes native, editable draw.io XML (every block is
 a vertex, every line an edge with real `source`/`target`, containers have children, tables are
-swimlanes with rows). Layout algorithms for other kinds (ERD, sequence, ...) come later.
+swimlanes with rows). Automatic layout exists for kind `erd` (see erd.md); sequence and other kinds come later.
 
 ## Usage
 
-    python -B -m diagram_tool <input.json> [-o out.drawio] [--stdout] [--theme mono|accent]
+    python -B -m diagram_tool <input.json> [-o out.drawio|dir] [--stdout] [--theme mono|accent] [--kind raw|erd] [--no-clobber]
 
-- Default output: the input path with `.drawio`. `-o` and `--stdout` are exclusive.
+- Default output: the input path with `.drawio`. `-o` (a file, or an existing directory) and `--stdout` are exclusive.
+  `--kind raw|erd` demands a kind (see erd.md for `erd`), `--no-clobber` keeps an existing output; stderr shows
+  `wrote: <path>` / `skipped: <path>`.
 - Exit codes: 0 ok, 1 invalid JSON/schema (message `error: <path>: <reason>` on stderr, ASCII),
   2 usage or I/O error. Warnings (`warning: ...`) go to stderr and do not change the exit code.
 - Output: UTF-8, LF, no BOM, written atomically (temp file + replace). Same input -> same bytes.
-- An existing output file is overwritten. Hand-edit protection (`.bak`, `--check`) is planned for G0a2;
+- An existing output file is overwritten unless `--no-clobber` is given. Hand-edit protection (`.bak`, `--check`) is planned for G0a2;
   until then never point `-o` at a hand-drawn diagram.
 
 ## File
