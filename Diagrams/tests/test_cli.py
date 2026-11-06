@@ -75,6 +75,15 @@ class CliTest(unittest.TestCase):
         err.decode("ascii")
         self.assertNotIn(b"Traceback", err)
 
+    def test_non_string_kind_is_a_clean_error(self):
+        path = os.path.join(self.tmp, "kind.json")
+        for text in ('{"kind": []}', '{"kind": {}}', '{"kind": 5}', '{"kind": null}', '{"kind": true}'):
+            write(path, text)
+            code, out, err = run(path, "--stdout")
+            self.assertEqual((code, out), (1, b""), text)
+            self.assertTrue(err.startswith(b"error: kind"), (text, err))
+            self.assertNotIn(b"Traceback", err)
+
     def test_success_exit_zero_and_warnings_only_on_stderr(self):
         code, out, err = run(SMOKE_JSON, "--stdout")
         self.assertEqual(code, 0)

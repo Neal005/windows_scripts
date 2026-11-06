@@ -30,7 +30,7 @@ def convert(data, theme=None):
     kind = data.get("kind") if isinstance(data, dict) else None
     if isinstance(data, dict) and "kind" not in data:
         raise ValidationError("missing required key 'kind'")
-    if kind not in KINDS:
+    if not isinstance(kind, str) or kind not in KINDS:
         raise ValidationError("unsupported kind (supported: %s)" % ", ".join(sorted(KINDS)), "kind")
     return KINDS[kind](data, theme)
 
