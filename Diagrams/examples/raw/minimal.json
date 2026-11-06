@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "raw",
+  "title": "Minimal",
+  "pages": [
+    {
+      "id": "p1",
+      "name": "Minimal",
+      "cells": [
+        {"id": "A", "type": "vertex", "x": 40, "y": 40, "w": 140, "h": 50, "label": "Client"},
+        {"id": "B", "type": "vertex", "x": 300, "y": 40, "w": 140, "h": 50, "label": "Server"},
+        {"id": "E", "type": "edge", "source": "A", "target": "B", "label": "request"}
+      ]
+    }
+  ]
+}

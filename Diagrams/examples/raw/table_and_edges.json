@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "kind": "raw",
+  "title": "Bang va quan he",
+  "theme": "mono",
+  "pages": [
+    {
+      "id": "erd",
+      "name": "Bang va quan he",
+      "cells": [
+        {"id": "ql", "type": "table", "variant": "reuse", "x": 40, "y": 40, "w": 220, "title": "ban_quan_ly",
+         "rows": [
+           {"id": "id", "label": "id uuid PK", "role": "pk"},
+           {"id": "ten", "label": "ten varchar"},
+           {"id": "tao", "label": "created_at timestamp"}
+         ]},
+        {"id": "bc", "type": "table", "variant": "new", "x": 400, "y": 160, "w": 240, "title": "bao_cao",
+         "rows": [
+           {"id": "id", "label": "id uuid PK", "role": "pk"},
+           {"id": "ql", "label": "ban_quan_ly_id uuid FK", "role": "fk"},
+           {"id": "sep", "label": "", "role": "separator"},
+           {"id": "nt", "label": "Luu y: cot nay bat buoc", "role": "note"}
+         ]},
+        {"id": "rel", "type": "edge", "source": "ql", "target": "bc", "start": "er-mandatory-one", "end": "er-zero-many",
+         "exit": {"x": 1, "y": 0.5}, "entry": {"x": 0, "y": 0.5},
+         "points": [{"x": 330, "y": 94}, {"x": 330, "y": 227}],
+         "labels": [{"text": "1 - n", "pos": 0, "dy": -8}]}
+      ]
+    }
+  ]
+}
