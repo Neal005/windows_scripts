@@ -8,6 +8,7 @@ Raises ValidationError with an ASCII message and a field path such as
 import math
 from collections import namedtuple
 
+from ..core import geometry
 from ..core import schema as S
 from ..core.errors import ValidationError
 from ..core.ids import is_valid_id, slug, unique_id
@@ -434,13 +435,8 @@ class _Validator:
 
     def origin(self, cell_id, by_id, cache):
         """Absolute (x, y) of the top-left corner of a vertex/table, or (0, 0) for None."""
-        if cell_id is None:
-            return (0, 0)
-        if cell_id in cache:
-            return cache[cell_id]
-        cell = by_id[cell_id]
-        px, py = self.origin(cell["parent"], by_id, cache)
-        cache[cell_id] = (px + cell["x"], py + cell["y"])
+        if cell_id not in cache:
+            cache[cell_id] = geometry.origin(by_id, cell_id)
         return cache[cell_id]
 
     def check_containment(self, cell, by_id):
@@ -508,14 +504,7 @@ class _Validator:
             fail(join(path, "exit"), "required when 'points' is given (needed to align the first point)")
         if en is None:
             fail(join(path, "entry"), "required when 'points' is given (needed to align the last point)")
-        ox, oy = self.origin(edge["parent"], by_id, cache)
-
-        def port_xy(cell, port):
-            cx, cy = self.origin(cell["id"], by_id, cache)
-            return (cx + port["x"] * cell["w"] - ox, cy + port["y"] * cell["h"] - oy)
-
-        p_exit = port_xy(src, ex)
-        p_entry = port_xy(tgt, en)
+        p_exit, p_entry = geometry.edge_endpoints(by_id, edge)
         eps = S.ALIGN_EPS
 
         def check_end(point, port_pt, face, ppath, what):
@@ -541,6 +530,17 @@ class _Validator:
             if max(dx, dy) < S.MIN_SEGMENT:
                 fail(ip, "segment shorter than %d px (draw.io drops points closer than 1 px)" % S.MIN_SEGMENT)
         check_end(pts[-1], p_entry, en["face"], join(base, len(pts) - 1), "entry")
+
+        # Every point must be a real bend: consecutive segments (exit -> points -> entry) must
+        # alternate between horizontal and vertical. A collinear point is dropped by draw.io's
+        # pushPoint (or changes the segment orientation logic), so the drawn polyline would
+        # differ from the declared one.
+        chain = [(p_exit[0], p_exit[1])] + [(p["x"], p["y"]) for p in pts] + [(p_entry[0], p_entry[1])]
+        horizontal = [abs(chain[i + 1][1] - chain[i][1]) <= eps for i in range(len(chain) - 1)]
+        for i in range(len(pts)):
+            if horizontal[i] == horizontal[i + 1]:
+                fail(join(base, i), "not a bend: the segments before and after it have the same "
+                     "direction (remove the point)")
 
     def auto_size(self, cells, by_id, origins):
         right = 0
