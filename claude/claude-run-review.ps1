@@ -1,4 +1,4 @@
-# =============================================================================
+﻿# =============================================================================
 # claude-run-review.ps1
 # Runs a single headless Claude Code review call, with the working directory
 # correctly set BEFORE Claude starts - avoiding the "changes directory before
@@ -211,6 +211,12 @@ try {
     # Readable Vietnamese output from Python on Windows consoles
     $env:PYTHONUTF8 = '1'
     $env:PYTHONIOENCODING = 'utf-8'
+
+    # Helpers (qa-read, docx_dump, pdf_dump)
+    $helpersDir = Join-Path $PSScriptRoot 'helpers'
+    if (Test-Path -LiteralPath $helpersDir) {
+        $env:PATH = "$helpersDir;$($env:PATH)"
+    }
 
     # -------------------------------------------------------------------
     # 6. Redirect tool caches out of the repo (keeps git status clean)

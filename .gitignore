@@ -1,5 +1,6 @@
 /Agent/
 *.lnk
+.venv
 
 # SmartGlasses toggle runtime files
 windows_ultilities/smartglasses_log.txt

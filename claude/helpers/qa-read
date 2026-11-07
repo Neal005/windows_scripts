@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# qa-read - single READ-ONLY entry point for document helpers used by the
+# Claude QA reviewer. Always runs with the helpers' own venv, never the venv
+# of the repo under review.
+#
+#   qa-read docx <file.docx> summary|table N|text|tags|grep "<pattern>"
+#   qa-read pdf  <file.pdf>  info|text [--pages 1-3]|tables <page>|grep "<pattern>"
+#
+# To support a new format: add <format>_dump.py to this folder and one line
+# in the case below.
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PY="$HERE/.venv/Scripts/python.exe"
+
+if [ ! -x "$PY" ]; then
+  echo "qa-read: helpers venv not found at $PY" >&2
+  exit 2
+fi
+
+kind="$1"
+shift
+
+case "$kind" in
+  docx) exec "$PY" "$HERE/docx_dump.py" "$@" ;;
+  pdf)  exec "$PY" "$HERE/pdf_dump.py" "$@" ;;
+  *)
+    echo "usage: qa-read docx|pdf <file> <mode> [args]" >&2
+    exit 2
+    ;;
+esac

@@ -26,24 +26,34 @@ function Write-Warn($msg) { Write-Host "  [WARNING] $msg" -ForegroundColor Yello
 # starting the MCP server, so a bad token doesn't fail mid-review.
 # -----------------------------------------------------------------------
 function Test-ClaudeAuth {
+    # Windows PowerShell 5.1: with $ErrorActionPreference = "Stop", any stderr
+    # line from a native exe redirected via 2>&1 becomes a terminating
+    # NativeCommandError -> falls into catch -> false negative. Relax it here.
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     try {
-        $statusOutput = claude auth status 2>&1
+        $script:ClaudeAuthRaw = (& claude auth status 2>&1 | Out-String)
         $exitCode = $LASTEXITCODE
-        if ($exitCode -ne 0) { return $false }
-        if ($statusOutput -match "not logged in|not authenticated|no credentials|please run /login|expired") {
-            return $false
-        }
-        return $true
     } catch {
+        $script:ClaudeAuthRaw = $_.Exception.Message
+        return $false
+    } finally {
+        $ErrorActionPreference = $prevEap
+    }
+    if ($exitCode -ne 0) { return $false }
+    if ($script:ClaudeAuthRaw -match '(?i)not logged in|not authenticated|no credentials|please run /login|"loggedIn"\s*:\s*false') {
         return $false
     }
+    return $true
 }
 
 function Assert-ClaudeAuth {
     if (Test-ClaudeAuth) { return }
 
-    Write-Err "Bạn chưa đăng nhập! Đăng nhập hoặc thoát"
-    $choice = Read-Host "Nhấn 'L' để đăng nhập (claude auth login), hoặc phím bất kỳ khác để thoát"
+    Write-Err "You are not logged in to Claude Code."
+    Write-Host "  Output of 'claude auth status' (exit $LASTEXITCODE):" -ForegroundColor DarkGray
+    Write-Host ($script:ClaudeAuthRaw.Trim() -replace '(?m)^', '    ') -ForegroundColor DarkGray
+    $choice = Read-Host "Press 'L' to log in (claude auth login), or any other key to exit"
     if ($choice -notmatch '^[Ll]') {
         exit 1
     }
@@ -51,10 +61,10 @@ function Assert-ClaudeAuth {
     claude auth login
 
     if (-not (Test-ClaudeAuth)) {
-        Write-Err "Đăng nhập không thành công. Thoát script."
+        Write-Err "Login failed. Exiting."
         exit 1
     }
-    Write-Ok "Đăng nhập thành công."
+    Write-Ok "Logged in successfully."
 }
 
 Write-Step "=== Claude Code QA/Reviewer Launcher ==="
