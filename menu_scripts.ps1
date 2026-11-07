@@ -7,6 +7,9 @@ $currentLocation = $rootDir
 # Add more names here if other tool-generated folders show up later.
 $excludedDirNames = @(".claude", ".git")
 
+# File names to always hide from the menu listing (case-insensitive).
+$excludedFileNames = @("lk.ps1")
+
 while ($true) {
     Clear-Host
     Write-Host "=== SCRIPTS MENU ===" -ForegroundColor Cyan
@@ -22,7 +25,8 @@ while ($true) {
     # and any folder name listed in $excludedDirNames)
     $dirs = Get-ChildItem -Path $currentLocation -Directory |
         Where-Object { $excludedDirNames -notcontains $_.Name }
-    $files = Get-ChildItem -Path $currentLocation -File -Filter "*.ps1" | Where-Object { $_.FullName -ne $PSCommandPath }
+    $files = Get-ChildItem -Path $currentLocation -File -Filter "*.ps1" |
+        Where-Object { $_.FullName -ne $PSCommandPath -and $excludedFileNames -notcontains $_.Name }
 
     $menuMap = @{}
     $index = 1
